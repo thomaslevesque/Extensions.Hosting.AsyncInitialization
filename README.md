@@ -1,5 +1,9 @@
 # Extensions.Hosting.AsyncInitialization
 
+[![NuGet version](https://img.shields.io/nuget/v/Extensions.Hosting.AsyncInitialization.svg?logo=nuget)](https://www.nuget.org/packages/Extensions.Hosting.AsyncInitialization)
+[![AppVeyor build](https://img.shields.io/appveyor/ci/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization)
+[![AppVeyor tests](https://img.shields.io/appveyor/tests/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization/build/tests)
+
 A simple helper to perform async application initialization for the generic host in .NET Core 2.1 or higher.
 
 ## Usage
