@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>enable</Nullable>
     <Authors>Thomas Levesque</Authors>
     <Title>.NET Core generic host async initialization</Title>
     <Description>A simple helper to perform async application initialization for the generic host in .NET Core 2.1 or higher.</Description>

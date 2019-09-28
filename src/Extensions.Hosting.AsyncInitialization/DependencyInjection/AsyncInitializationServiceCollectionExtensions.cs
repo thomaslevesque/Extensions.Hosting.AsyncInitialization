@@ -18,6 +18,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>A reference to this instance after the operation has completed.</returns>
         public static IServiceCollection AddAsyncInitialization(this IServiceCollection services)
         {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+
             services.TryAddTransient<RootInitializer>();
             return services;
         }
@@ -46,6 +49,9 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddAsyncInitializer<TInitializer>(this IServiceCollection services, TInitializer initializer)
             where TInitializer : class, IAsyncInitializer
         {
+            if (initializer == null)
+                throw new ArgumentNullException(nameof(initializer));
+
             return services
                 .AddAsyncInitialization()
                 .AddSingleton<IAsyncInitializer>(initializer);
@@ -59,6 +65,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>A reference to this instance after the operation has completed.</returns>
         public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<IServiceProvider, IAsyncInitializer> implementationFactory)
         {
+            if (implementationFactory == null)
+                throw new ArgumentNullException(nameof(implementationFactory));
+
             return services
                 .AddAsyncInitialization()
                 .AddTransient(implementationFactory);
@@ -72,6 +81,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>A reference to this instance after the operation has completed.</returns>
         public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Type initializerType)
         {
+            if (initializerType == null)
+                throw new ArgumentNullException(nameof(initializerType));
+
             return services
                 .AddAsyncInitialization()
                 .AddTransient(typeof(IAsyncInitializer), initializerType);
@@ -85,6 +97,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>A reference to this instance after the operation has completed.</returns>
         public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<Task> initializer)
         {
+            if (initializer == null)
+                throw new ArgumentNullException(nameof(initializer));
+
             return services
                 .AddAsyncInitialization()
                 .AddSingleton<IAsyncInitializer>(new DelegateAsyncInitializer(initializer));

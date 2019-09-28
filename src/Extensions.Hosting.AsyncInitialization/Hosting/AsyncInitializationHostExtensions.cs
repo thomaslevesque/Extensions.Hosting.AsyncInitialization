@@ -18,9 +18,12 @@ namespace Microsoft.Extensions.Hosting
         /// <returns>A task that represents the initialization completion.</returns>
         public static async Task InitAsync(this IHost host)
         {
+            if (host == null)
+                throw new ArgumentNullException(nameof(host));
+
             using (var scope = host.Services.CreateScope())
             {
-                var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>();
+                var rootInitializer = scope.ServiceProvider.GetService<RootInitializer?>();
                 if (rootInitializer == null)
                 {
                     throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
