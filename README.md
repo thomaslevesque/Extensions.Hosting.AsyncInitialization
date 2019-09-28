@@ -6,8 +6,8 @@
 
 A simple helper to perform async application initialization for the generic host in .NET Core 2.1 or higher (including ASP.NET Core 3).
 
-**Note: ASP.NET Core 2.x doesn't use the generic host. If you need to perform async initialization in ASP.NET Core 2.x, use
-[AspNetCore.AsyncInitialization](https://github.com/thomaslevesque/AspNetCore.AsyncInitialization/) instead.**
+***Note:** ASP.NET Core 2.x doesn't use the generic host. If you need to perform async initialization in ASP.NET Core 2.x, use
+[AspNetCore.AsyncInitialization](https://github.com/thomaslevesque/AspNetCore.AsyncInitialization/) instead.*
 
 ## Usage
 
