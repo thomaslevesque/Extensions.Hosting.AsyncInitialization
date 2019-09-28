@@ -107,7 +107,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 .UseServiceProviderFactory(new DefaultServiceProviderFactory(
                     new ServiceProviderOptions
                     {
-                        ValidateScopes = true
+                        ValidateScopes = validateScopes
                     }
                 ))
                 .Build();
