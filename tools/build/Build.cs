@@ -28,7 +28,7 @@ namespace build
                 app.ShowHelp();
                 app.Out.WriteLine("Bullseye help:");
                 app.Out.WriteLine();
-                RunTargetsAndExit(new[] { "-h" });
+                RunTargetsWithoutExiting(new[] { "-h" });
                 return;
             }
 
@@ -75,7 +75,7 @@ namespace build
 
             Target("default", DependsOn("test", "pack"));
 
-            RunTargetsAndExit(RemainingArguments);
+            RunTargetsWithoutExiting(RemainingArguments);
         }
 
         private static string GetSolutionDirectory() =>
