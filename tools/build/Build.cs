@@ -6,7 +6,7 @@ using static SimpleExec.Command;
 
 namespace build
 {
-    [Command(ThrowOnUnexpectedArgument = false)]
+    [Command(UnrecognizedArgumentHandling = UnrecognizedArgumentHandling.Throw)]
     [SuppressDefaultHelpOption]
     class Build
     {
