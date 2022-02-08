@@ -1,7 +1,8 @@
-using System;
-using System.Threading.Tasks;
 using Extensions.Hosting.AsyncInitialization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection
@@ -34,9 +35,18 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddAsyncInitializer<TInitializer>(this IServiceCollection services)
             where TInitializer : class, IAsyncInitializer
         {
-            return services
-                .AddAsyncInitialization()
-                .AddTransient<IAsyncInitializer, TInitializer>();
+            services.AddAsyncInitialization();
+
+            if (!typeof(TInitializer).IsInterface)
+                return services.AddTransient<IAsyncInitializer, TInitializer>();
+
+            if (HaveSingleRegisteredService<TInitializer>(services))
+                return services.AddTransient<IAsyncInitializer>(x => x.GetRequiredService<TInitializer>());
+
+            if (HaveMultipleRegisteredServices<TInitializer>(services))
+                return services.AddDecoratedInitializers<TInitializer>();
+
+            throw new InvalidOperationException($"No Implementation type found for type inteface {typeof(TInitializer).FullName}.");
         }
 
         /// <summary>
@@ -105,6 +115,23 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddSingleton<IAsyncInitializer>(new DelegateAsyncInitializer(initializer));
         }
 
+        private static IServiceCollection AddDecoratedInitializers<TInitializer>(this IServiceCollection services) where TInitializer : class, IAsyncInitializer
+        {
+            return services.AddTransient<IAsyncInitializer, DecoratedInitializer>(x =>
+            {
+                var initializersList = x.GetServices<TInitializer>();
+                var decoratedInitializer = new DecoratedInitializer();
+
+                foreach (var initializer in initializersList)
+                {
+                    var next = new DecoratedInitializer(initializer, decoratedInitializer);
+                    decoratedInitializer = next;
+                }
+
+                return decoratedInitializer;
+            });
+        }
+
         private class DelegateAsyncInitializer : IAsyncInitializer
         {
             private readonly Func<Task> _initializer;
@@ -119,5 +146,11 @@ namespace Microsoft.Extensions.DependencyInjection
                 return _initializer();
             }
         }
+
+        private static bool HaveSingleRegisteredService<TInitializer>(IServiceCollection services) =>
+            services.Count(descriptor => descriptor.ServiceType.Equals(typeof(TInitializer))) == 1;
+
+        private static bool HaveMultipleRegisteredServices<TInitializer>(IServiceCollection services) =>
+            services.Count(descriptor => descriptor.ServiceType.Equals(typeof(TInitializer))) > 1;
     }
 }

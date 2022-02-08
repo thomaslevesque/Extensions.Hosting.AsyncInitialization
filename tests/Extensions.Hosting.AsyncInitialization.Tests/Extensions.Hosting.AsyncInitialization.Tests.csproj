@@ -1,19 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.0;netcoreapp2.1;net471</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;netcoreapp2.1;net471;net5.0</TargetFrameworks>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <MSEHostingVersion Condition="'$(TargetFramework)' == 'netcoreapp2.1'">2.1.0</MSEHostingVersion>
-    <MSEHostingVersion Condition="'$(TargetFramework)' == 'net471'">2.1.0</MSEHostingVersion>
-    <MSEHostingVersion Condition="'$(TargetFramework)' == 'netcoreapp3.0'">3.0.0</MSEHostingVersion>
+	  <MSEHostingVersion Condition="'$(TargetFramework)' == 'netcoreapp3.1'">3.1.0</MSEHostingVersion>
+	  <MSEHostingVersion Condition="'$(TargetFramework)' == 'net471'">2.1.0</MSEHostingVersion>
+	  <MSEHostingVersion Condition="'$(TargetFramework)' == 'net5.0'">5.0.0</MSEHostingVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="FakeItEasy" Version="5.2.0" />
+    <PackageReference Include="FluentAssertions" Version="6.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MSEHostingVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.3.0" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net471" Version="1.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
