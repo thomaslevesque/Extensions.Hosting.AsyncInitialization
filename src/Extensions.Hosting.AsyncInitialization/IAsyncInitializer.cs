@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Extensions.Hosting.AsyncInitialization
 {
@@ -8,9 +9,10 @@ namespace Extensions.Hosting.AsyncInitialization
     public interface IAsyncInitializer
     {
         /// <summary>
-        /// Performs async initialization.
+        /// Performs async initialization
         /// </summary>
+        /// <param name="cancellationToken">Notifies that the operation should be cancl</param>
         /// <returns>A task that represents the initialization completion.</returns>
-        Task InitializeAsync();
+        Task InitializeAsync(CancellationToken cancellationToken);
     }
 }

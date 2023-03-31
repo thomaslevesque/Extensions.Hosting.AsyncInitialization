@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -15,14 +16,14 @@ using Xunit;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
-    public class AsyncInitializationTests
+    public class WebHostAsyncInitializationTests
     {
         [Fact]
         public async Task Single_initializer_is_called()
         {
             IAsyncInitializer initializer = A.Fake<IAsyncInitializer>();
 
-            IHost host = CreateHost(services => services.AddAsyncInitializer(initializer));
+            IWebHost host = CreateWebHost(services => services.AddAsyncInitializer(initializer));
 
             await host.InitAsync();
 
@@ -34,7 +35,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         {
             Func<CancellationToken, Task> initializer = A.Fake<Func<CancellationToken, Task>>();
 
-            IHost host = CreateHost(services => services.AddAsyncInitializer(initializer));
+            IWebHost host = CreateWebHost(services => services.AddAsyncInitializer(initializer));
 
             await host.InitAsync();
 
@@ -48,7 +49,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             IAsyncInitializer initializer2 = A.Fake<IAsyncInitializer>();
             IAsyncInitializer initializer3 = A.Fake<IAsyncInitializer>();
 
-            IHost host = CreateHost(services =>
+            IWebHost host = CreateWebHost(services =>
             {
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
@@ -65,13 +66,12 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Initializer_with_scoped_dependency_is_resolved()
         {
-            IHost host = CreateHost(
+            IWebHost host = CreateWebHost(
                 services =>
                 {
                     services.AddScoped(sp => A.Fake<IDependency>());
                     services.AddAsyncInitializer<Initializer>();
-                },
-                true);
+                });
 
             await host.InitAsync();
         }
@@ -85,7 +85,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             A.CallTo(() => initializer2.InitializeAsync(default)).ThrowsAsync(() => new Exception("oops"));
 
-            IHost host = CreateHost(services =>
+            IWebHost host = CreateWebHost(services =>
             {
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
@@ -116,7 +116,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                                 cancellationTokenSource.Cancel();
                             });
 
-            IHost host = CreateHost(services =>
+            IWebHost host = CreateWebHost(services =>
             {
                 services.AddAsyncInitializer(initializer1Mock.Object);
                 services.AddAsyncInitializer(initializer2Mock.Object);
@@ -133,21 +133,16 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task InitAsync_throws_InvalidOperationException_when_services_are_not_registered()
         {
-            IHost host = CreateHost(services => { });
+            IWebHost host = CreateWebHost(services => { });
             Exception exception = await Record.ExceptionAsync(() => host.InitAsync());
             Assert.IsType<InvalidOperationException>(exception);
             Assert.Equal("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.", exception.Message);
         }
 
-        private static IHost CreateHost(Action<IServiceCollection> configureServices, bool validateScopes = false) =>
-            new HostBuilder()
+        private static IWebHost CreateWebHost(Action<IServiceCollection> configureServices) =>
+              new WebHostBuilder()
                 .ConfigureServices(configureServices)
-                .UseServiceProviderFactory(new DefaultServiceProviderFactory(
-                    new ServiceProviderOptions
-                    {
-                        ValidateScopes = validateScopes
-                    }
-                ))
+                .UseStartup<Startup>()
                 .Build();
 
         public interface IDependency
@@ -166,6 +161,11 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             ///<inheritdoc/>
             public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        public class Startup
+        {
+            public void Configure(IServiceCollection services) { }
         }
     }
 }

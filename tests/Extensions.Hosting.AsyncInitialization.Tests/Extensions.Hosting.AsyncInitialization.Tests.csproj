@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.0;netcoreapp2.1;net471</TargetFrameworks>
-    <LangVersion>8.0</LangVersion>
+    <TargetFrameworks>netcoreapp3.0;netcoreapp2.1<!--;net471--></TargetFrameworks>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <MSEHostingVersion Condition="'$(TargetFramework)' == 'netcoreapp2.1'">2.1.0</MSEHostingVersion>
@@ -19,6 +19,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.10.0"/>
+    <PackageReference Include="Moq" Version="4.18.0"/>
   </ItemGroup>
 
   <ItemGroup>

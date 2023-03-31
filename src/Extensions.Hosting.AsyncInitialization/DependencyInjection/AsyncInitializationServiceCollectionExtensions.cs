@@ -1,7 +1,10 @@
-using System;
-using System.Threading.Tasks;
 using Extensions.Hosting.AsyncInitialization;
+
 using Microsoft.Extensions.DependencyInjection.Extensions;
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection
@@ -49,10 +52,9 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddAsyncInitializer<TInitializer>(this IServiceCollection services, TInitializer initializer)
             where TInitializer : class, IAsyncInitializer
         {
-            if (initializer == null)
-                throw new ArgumentNullException(nameof(initializer));
-
-            return services
+            return initializer == null
+                ? throw new ArgumentNullException(nameof(initializer))
+                : services
                 .AddAsyncInitialization()
                 .AddSingleton<IAsyncInitializer>(initializer);
         }
@@ -65,10 +67,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>A reference to this instance after the operation has completed.</returns>
         public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<IServiceProvider, IAsyncInitializer> implementationFactory)
         {
-            if (implementationFactory == null)
-                throw new ArgumentNullException(nameof(implementationFactory));
-
-            return services
+            return implementationFactory == null
+                ? throw new ArgumentNullException(nameof(implementationFactory))
+                : services
                 .AddAsyncInitialization()
                 .AddTransient(implementationFactory);
         }
@@ -81,10 +82,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>A reference to this instance after the operation has completed.</returns>
         public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Type initializerType)
         {
-            if (initializerType == null)
-                throw new ArgumentNullException(nameof(initializerType));
-
-            return services
+            return initializerType == null
+                ? throw new ArgumentNullException(nameof(initializerType))
+                : services
                 .AddAsyncInitialization()
                 .AddTransient(typeof(IAsyncInitializer), initializerType);
         }
@@ -95,28 +95,31 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
         /// <param name="initializer">The delegate that performs async initialization.</param>
         /// <returns>A reference to this instance after the operation has completed.</returns>
-        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<Task> initializer)
+        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<CancellationToken, Task> initializer)
         {
-            if (initializer == null)
-                throw new ArgumentNullException(nameof(initializer));
-
-            return services
+            return initializer == null
+                ? throw new ArgumentNullException(nameof(initializer))
+                : services
                 .AddAsyncInitialization()
                 .AddSingleton<IAsyncInitializer>(new DelegateAsyncInitializer(initializer));
         }
 
         private class DelegateAsyncInitializer : IAsyncInitializer
         {
-            private readonly Func<Task> _initializer;
+            private readonly Func<CancellationToken, Task> _initializer;
 
-            public DelegateAsyncInitializer(Func<Task> initializer)
+            public DelegateAsyncInitializer(Func<CancellationToken, Task> initializer)
             {
                 _initializer = initializer;
             }
 
-            public Task InitializeAsync()
+            ///<inheritdoc/>
+            public Task InitializeAsync() => InitializeAsync(CancellationToken.None);
+
+            ///<inheritdoc/>
+            public Task InitializeAsync(CancellationToken cancellationToken)
             {
-                return _initializer();
+                return _initializer(cancellationToken);
             }
         }
     }

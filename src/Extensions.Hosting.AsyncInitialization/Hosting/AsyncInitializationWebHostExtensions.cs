@@ -1,4 +1,4 @@
-using Extensions.Hosting.AsyncInitialization;
+﻿using Extensions.Hosting.AsyncInitialization;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -6,26 +6,25 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-// ReSharper disable once CheckNamespace
-namespace Microsoft.Extensions.Hosting
+namespace Microsoft.AspNetCore.Hosting
 {
     /// <summary>
     /// Provides extension methods to perform async initialization of an application.
     /// </summary>
-    public static class AsyncInitializationHostExtensions
+    public static class AsyncInitializationWebHostExtensions
     {
         /// <summary>
         /// Initializes the application, by calling all registered async initializers.
         /// </summary>
-        /// <param name="host">The host.</param>
+        /// <param name="webHost">The host.</param>
         /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
         /// <returns>A task that represents the initialization completion.</returns>
-        public static async Task InitAsync(this IHost host, CancellationToken cancellationToken = default)
+        public static async Task InitAsync(this IWebHost webHost, CancellationToken cancellationToken = default)
         {
-            if (host == null)
-                throw new ArgumentNullException(nameof(host));
+            if (webHost == null)
+                throw new ArgumentNullException(nameof(webHost));
 
-            using IServiceScope scope = host.Services.CreateScope();
+            using IServiceScope scope = webHost.Services.CreateScope();
             RootInitializer? rootInitializer = scope.ServiceProvider.GetService<RootInitializer?>();
             if (rootInitializer == null)
             {

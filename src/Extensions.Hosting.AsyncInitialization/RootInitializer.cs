@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Extensions.Hosting.AsyncInitialization
 {
@@ -16,18 +18,19 @@ namespace Extensions.Hosting.AsyncInitialization
             _initializers = initializers;
         }
 
-        public async Task InitializeAsync()
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Starting async initialization");
 
             try
             {
-                foreach (var initializer in _initializers)
+                foreach (IAsyncInitializer initializer in _initializers)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     _logger.LogInformation("Starting async initialization for {InitializerType}", initializer.GetType());
                     try
                     {
-                        await initializer.InitializeAsync();
+                        await initializer.InitializeAsync(cancellationToken);
                         _logger.LogInformation("Async initialization for {InitializerType} completed", initializer.GetType());
                     }
                     catch (Exception ex)
@@ -39,7 +42,12 @@ namespace Extensions.Hosting.AsyncInitialization
 
                 _logger.LogInformation("Async initialization completed");
             }
-            catch(Exception ex)
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Async initialization cancelled");
+                throw;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Async initialization failed");
                 throw;

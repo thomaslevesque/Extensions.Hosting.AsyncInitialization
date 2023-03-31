@@ -35,7 +35,7 @@ A simple helper to perform async application initialization for the generic host
             ...
         }
 
-        public async Task InitializeAsync()
+        public async Task InitializeAsync(CancellationToken cancellationToken)
         {
             // Initialization code here
         }
@@ -58,6 +58,24 @@ A simple helper to perform async application initialization for the generic host
         await host.RunAsync();
     }
     ```
+
+    you can also pass a `CancellationToken` in order to propagate notifications to cancel the initialization if needed.<br />
+    In the following example, the initialization will be cancelled 
+    ```csharp
+    public static async Task Main(string[] args)
+    {
+        CancellationToken cancellationTokenSource = new CancellationTokenSource();
+
+        // The following line will hook `Ctrl` + `C` to the cancellation token. 
+        Console.CancelKeyPress += (source, args) => cancellationTokenSource.Cancel();
+
+        var host = CreateHostBuilder(args).Build();
+
+        await host.InitAsync(cancellationTokenSource.Token);
+        await host.RunAsync();
+    }
+    ```
+
 
 (Note that you need to [set the C# language version to 7.1 or higher in your project](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/configure-language-version#edit-the-csproj-file) to enable the "async Main" feature.)
 
