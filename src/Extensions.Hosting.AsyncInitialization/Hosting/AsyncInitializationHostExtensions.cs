@@ -1,10 +1,8 @@
-using Extensions.Hosting.AsyncInitialization;
-
-using Microsoft.Extensions.DependencyInjection;
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Extensions.Hosting.AsyncInitialization;
+using Microsoft.Extensions.DependencyInjection;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.Hosting
@@ -25,8 +23,8 @@ namespace Microsoft.Extensions.Hosting
             if (host == null)
                 throw new ArgumentNullException(nameof(host));
 
-            using IServiceScope scope = host.Services.CreateScope();
-            RootInitializer? rootInitializer = scope.ServiceProvider.GetService<RootInitializer?>();
+            using var scope = host.Services.CreateScope();
+            var rootInitializer = scope.ServiceProvider.GetService<RootInitializer?>();
             if (rootInitializer == null)
             {
                 throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");

@@ -1,16 +1,9 @@
-﻿using FakeItEasy;
-
-using FluentAssertions;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
-using Moq;
-
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-
+using FakeItEasy;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
@@ -20,9 +13,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Single_initializer_is_called()
         {
-            IAsyncInitializer initializer = A.Fake<IAsyncInitializer>();
+            var initializer = A.Fake<IAsyncInitializer>();
 
-            IHost host = CreateHost(services => services.AddAsyncInitializer(initializer));
+            var host = CreateHost(services => services.AddAsyncInitializer(initializer));
 
             await host.InitAsync();
 
@@ -32,9 +25,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Delegate_initializer_is_called()
         {
-            Func<CancellationToken, Task> initializer = A.Fake<Func<CancellationToken, Task>>();
+            var initializer = A.Fake<Func<CancellationToken, Task>>();
 
-            IHost host = CreateHost(services => services.AddAsyncInitializer(initializer));
+            var host = CreateHost(services => services.AddAsyncInitializer(initializer));
 
             await host.InitAsync();
 
@@ -44,11 +37,11 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Multiple_initializers_are_called_in_order()
         {
-            IAsyncInitializer initializer1 = A.Fake<IAsyncInitializer>();
-            IAsyncInitializer initializer2 = A.Fake<IAsyncInitializer>();
-            IAsyncInitializer initializer3 = A.Fake<IAsyncInitializer>();
+            var initializer1 = A.Fake<IAsyncInitializer>();
+            var initializer2 = A.Fake<IAsyncInitializer>();
+            var initializer3 = A.Fake<IAsyncInitializer>();
 
-            IHost host = CreateHost(services =>
+            var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
@@ -65,7 +58,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Initializer_with_scoped_dependency_is_resolved()
         {
-            IHost host = CreateHost(
+            var host = CreateHost(
                 services =>
                 {
                     services.AddScoped(sp => A.Fake<IDependency>());
@@ -79,20 +72,20 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Failing_initializer_makes_initialization_fail()
         {
-            IAsyncInitializer initializer1 = A.Fake<IAsyncInitializer>();
-            IAsyncInitializer initializer2 = A.Fake<IAsyncInitializer>();
-            IAsyncInitializer initializer3 = A.Fake<IAsyncInitializer>();
+            var initializer1 = A.Fake<IAsyncInitializer>();
+            var initializer2 = A.Fake<IAsyncInitializer>();
+            var initializer3 = A.Fake<IAsyncInitializer>();
 
             A.CallTo(() => initializer2.InitializeAsync(default)).ThrowsAsync(() => new Exception("oops"));
 
-            IHost host = CreateHost(services =>
+            var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
                 services.AddAsyncInitializer(initializer3);
             });
 
-            Exception exception = await Record.ExceptionAsync(() => host.InitAsync());
+            var exception = await Record.ExceptionAsync(() => host.InitAsync());
             Assert.IsType<Exception>(exception);
             Assert.Equal("oops", exception.Message);
 
@@ -103,38 +96,34 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [Fact]
         public async Task Cancelled_initializer_makes_initialization_fail()
         {
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-            Mock<IAsyncInitializer> initializer1Mock = new Mock<IAsyncInitializer>(MockBehavior.Strict);
-            Mock<IAsyncInitializer> initializer2Mock = new Mock<IAsyncInitializer>(MockBehavior.Strict);
-            Mock<IAsyncInitializer> initializer3Mock = new Mock<IAsyncInitializer>(MockBehavior.Strict);
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var initializer1 = A.Fake<IAsyncInitializer>();
+            var initializer2 = A.Fake<IAsyncInitializer>();
+            var initializer3 = A.Fake<IAsyncInitializer>();
 
 
-            initializer1Mock.Setup(mock => mock.InitializeAsync(It.IsAny<CancellationToken>()))
-                            .Returns(Task.CompletedTask)
-                            .Callback(() =>
-                            {
-                                cancellationTokenSource.Cancel();
-                            });
+            A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).Invokes(_ => cancellationTokenSource.Cancel());
 
-            IHost host = CreateHost(services =>
+            var host = CreateHost(services =>
             {
-                services.AddAsyncInitializer(initializer1Mock.Object);
-                services.AddAsyncInitializer(initializer2Mock.Object);
-                services.AddAsyncInitializer(initializer3Mock.Object);
+                services.AddAsyncInitializer(initializer1);
+                services.AddAsyncInitializer(initializer2);
+                services.AddAsyncInitializer(initializer3);
             });
 
-            Func<Task> initializingHost = async () => await host.InitAsync(cancellationTokenSource.Token);
-
-            await initializingHost.Should().ThrowAsync<OperationCanceledException>();
-
-            initializer1Mock.Verify(mock => mock.InitializeAsync(It.IsAny<CancellationToken>()), Moq.Times.Once);
+            var exception = await Record.ExceptionAsync(() => host.InitAsync(cancellationTokenSource.Token));
+            Assert.IsType<OperationCanceledException>(exception);
+            
+            A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer2.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
+            A.CallTo(() => initializer3.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
         }
 
         [Fact]
         public async Task InitAsync_throws_InvalidOperationException_when_services_are_not_registered()
         {
-            IHost host = CreateHost(services => { });
-            Exception exception = await Record.ExceptionAsync(() => host.InitAsync());
+            var host = CreateHost(services => { });
+            var exception = await Record.ExceptionAsync(() => host.InitAsync());
             Assert.IsType<InvalidOperationException>(exception);
             Assert.Equal("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.", exception.Message);
         }
@@ -164,7 +153,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 _dependency = dependency;
             }
 
-            ///<inheritdoc/>
             public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
