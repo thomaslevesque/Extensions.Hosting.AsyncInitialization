@@ -131,11 +131,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 _initializer = initializer;
             }
 
-
-            ///<inheritdoc/>
-            public Task InitializeAsync() => InitializeAsync(CancellationToken.None);
-
-            ///<inheritdoc/>
             public Task InitializeAsync(CancellationToken cancellationToken)
             {
                 return _initializer(cancellationToken);

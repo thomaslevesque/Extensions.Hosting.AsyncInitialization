@@ -9,7 +9,7 @@ namespace Extensions.Hosting.AsyncInitialization
     public interface IAsyncInitializer
     {
         /// <summary>
-        /// Performs async initialization
+        /// Performs async initialization.
         /// </summary>
         /// <param name="cancellationToken">Notifies that the operation should be cancelled</param>
         /// <returns>A task that represents the initialization completion.</returns>

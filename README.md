@@ -61,7 +61,7 @@ A simple helper to perform async application initialization for the generic host
 
     You can also pass a `CancellationToken` in order to propagate notifications to cancel the initialization if needed.
 
-    In the following example, the initialization will be cancelled:
+    In the following example, the initialization will be cancelled when `Ctrl + C` keys are pressed :
     ```csharp
     public static async Task Main(string[] args)
     {
