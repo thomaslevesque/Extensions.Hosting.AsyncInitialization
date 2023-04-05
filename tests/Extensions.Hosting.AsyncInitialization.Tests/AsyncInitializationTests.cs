@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,19 +19,19 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             await host.InitAsync();
 
-            A.CallTo(() => initializer.InitializeAsync()).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer.InitializeAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
         }
 
         [Fact]
         public async Task Delegate_initializer_is_called()
         {
-            var initializer = A.Fake<Func<Task>>();
+            var initializer = A.Fake<Func<CancellationToken, Task>>();
 
             var host = CreateHost(services => services.AddAsyncInitializer(initializer));
 
             await host.InitAsync();
 
-            A.CallTo(() => initializer()).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer(CancellationToken.None)).MustHaveHappenedOnceExactly();
         }
 
         [Fact]
@@ -49,9 +50,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             await host.InitAsync();
 
-            A.CallTo(() => initializer1.InitializeAsync()).MustHaveHappenedOnceExactly()
-                .Then(A.CallTo(() => initializer2.InitializeAsync()).MustHaveHappenedOnceExactly())
-                .Then(A.CallTo(() => initializer3.InitializeAsync()).MustHaveHappenedOnceExactly());
+            A.CallTo(() => initializer1.InitializeAsync(default)).MustHaveHappenedOnceExactly()
+                .Then(A.CallTo(() => initializer2.InitializeAsync(default)).MustHaveHappenedOnceExactly())
+                .Then(A.CallTo(() => initializer3.InitializeAsync(default)).MustHaveHappenedOnceExactly());
         }
 
         [Fact]
@@ -75,7 +76,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var initializer2 = A.Fake<IAsyncInitializer>();
             var initializer3 = A.Fake<IAsyncInitializer>();
 
-            A.CallTo(() => initializer2.InitializeAsync()).ThrowsAsync(() => new Exception("oops"));
+            A.CallTo(() => initializer2.InitializeAsync(default)).ThrowsAsync(() => new Exception("oops"));
 
             var host = CreateHost(services =>
             {
@@ -88,8 +89,34 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<Exception>(exception);
             Assert.Equal("oops", exception.Message);
 
-            A.CallTo(() => initializer1.InitializeAsync()).MustHaveHappenedOnceExactly();
-            A.CallTo(() => initializer3.InitializeAsync()).MustNotHaveHappened();
+            A.CallTo(() => initializer1.InitializeAsync(default)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer3.InitializeAsync(default)).MustNotHaveHappened();
+        }
+
+        [Fact]
+        public async Task Cancelled_initializer_makes_initialization_fail()
+        {
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var initializer1 = A.Fake<IAsyncInitializer>();
+            var initializer2 = A.Fake<IAsyncInitializer>();
+            var initializer3 = A.Fake<IAsyncInitializer>();
+
+
+            A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).Invokes(_ => cancellationTokenSource.Cancel());
+
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(initializer1);
+                services.AddAsyncInitializer(initializer2);
+                services.AddAsyncInitializer(initializer3);
+            });
+
+            var exception = await Record.ExceptionAsync(() => host.InitAsync(cancellationTokenSource.Token));
+            Assert.IsType<OperationCanceledException>(exception);
+            
+            A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer2.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
+            A.CallTo(() => initializer3.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
         }
 
         [Fact]
@@ -125,7 +152,8 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 _dependency = dependency;
             }
-            public Task InitializeAsync() => Task.CompletedTask;
+
+            public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

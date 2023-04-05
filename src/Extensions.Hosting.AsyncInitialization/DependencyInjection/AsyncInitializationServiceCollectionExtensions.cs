@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Extensions.Hosting.AsyncInitialization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -102,21 +103,37 @@ namespace Microsoft.Extensions.DependencyInjection
 
             return services
                 .AddAsyncInitialization()
+                .AddSingleton<IAsyncInitializer>(new DelegateAsyncInitializer(_ => initializer()));
+        }
+
+        /// <summary>
+        /// Adds an async initializer whose implementation is the specified delegate.
+        /// </summary>
+        /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
+        /// <param name="initializer">The delegate that performs async initialization.</param>
+        /// <returns>A reference to this instance after the operation has completed.</returns>
+        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<CancellationToken, Task> initializer)
+        {
+            if (initializer == null)
+                throw new ArgumentNullException(nameof(initializer));
+
+            return services
+                .AddAsyncInitialization()
                 .AddSingleton<IAsyncInitializer>(new DelegateAsyncInitializer(initializer));
         }
 
         private class DelegateAsyncInitializer : IAsyncInitializer
         {
-            private readonly Func<Task> _initializer;
+            private readonly Func<CancellationToken, Task> _initializer;
 
-            public DelegateAsyncInitializer(Func<Task> initializer)
+            public DelegateAsyncInitializer(Func<CancellationToken, Task> initializer)
             {
                 _initializer = initializer;
             }
 
-            public Task InitializeAsync()
+            public Task InitializeAsync(CancellationToken cancellationToken)
             {
-                return _initializer();
+                return _initializer(cancellationToken);
             }
         }
     }
