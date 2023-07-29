@@ -1,1 +1,1 @@
-@dotnet run --project %~dp0\tools\build\build.csproj -- %*
+@dotnet run --project "%~dp0\tools\build\build.csproj" -- %*
