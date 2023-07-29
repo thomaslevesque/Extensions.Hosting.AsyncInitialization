@@ -23,10 +23,9 @@ namespace Microsoft.Extensions.Hosting
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
         public static async Task InitAsync(this IHost host, CancellationToken cancellationToken = default)
         {
-            if (host == null)
-                throw new ArgumentNullException(nameof(host));
+            if (host == null) throw new ArgumentNullException(nameof(host));
 
-            using var scope = host.Services.CreateScope();
+            await using var scope = host.Services.CreateAsyncScope();
             var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
                 ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
 
@@ -37,10 +36,11 @@ namespace Microsoft.Extensions.Hosting
         /// <summary>
         /// Initializes and runs the application, by first calling all registered async initializers.
         /// After the host terminates, any registered initializers that implement <see cref="IAsyncTeardown"/> are called to perform the teardown.
+        /// The <paramref name="host"/> instance is disposed of after running.
         /// </summary>
-        /// <param name="host">The host.</param>
+        /// <param name="host">The <see cref="IHost"/> to initialize and run.</param>
         /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
-        /// <returns>A task that represents the run completion.</returns>
+        /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the host is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
@@ -48,18 +48,22 @@ namespace Microsoft.Extensions.Hosting
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
 
-            using var scope = host.Services.CreateScope();
+            await using var scope = host.Services.CreateAsyncScope();
             var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
                 ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
 
-            try
+            await using (host as IAsyncDisposable)
             {
-                await rootInitializer.InitializeAsync(cancellationToken).ConfigureAwait(false);
-                await host.RunAsync(cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                await rootInitializer.TeardownAsync().ConfigureAwait(false);
+                try
+                {
+                    await rootInitializer.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    await host.StartAsync(cancellationToken).ConfigureAwait(false);
+                    await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await rootInitializer.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
+                }
             }
         }
     }
