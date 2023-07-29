@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\src\Extensions.Hosting.AsyncInitialization\Extensions.Hosting.AsyncInitialization.csproj" />
   </ItemGroup>
 
+		<ItemGroup>
+				<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		</ItemGroup>
+
 </Project>
