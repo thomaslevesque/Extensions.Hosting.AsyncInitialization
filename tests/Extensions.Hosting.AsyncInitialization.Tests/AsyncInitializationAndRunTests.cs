@@ -57,6 +57,21 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         }
 
         [Fact]
+        public async Task Initializer_with_teardown_and_singleton_disposable_dependency_does_not_fail_on_host_shutdown()
+        {
+            var host = CreateHost(services =>
+            {
+                services.AddSingleton<IDependency, DisposableDependency>();
+                services.AddAsyncInitializer<InitializerWithTearDown>();
+                services.AddTransient(factory => _testOutput);
+                services.AddHostedService<TestService>();
+            });
+            var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
+            Assert.IsType<Exception>(exception);
+            Assert.Equal("host", exception.Message);
+        }
+
+        [Fact]
         public async Task Multiple_initializers_with_teardown_are_called_in_reverse_order()
         {
             var initializer1 = A.Fake<IAsyncTeardown>();
