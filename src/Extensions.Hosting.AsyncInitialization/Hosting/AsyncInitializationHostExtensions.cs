@@ -32,6 +32,25 @@ namespace Microsoft.Extensions.Hosting
             await rootInitializer.InitializeAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Performs teardown, by calling all registered async initializers that implement <see cref="IAsyncTeardown"/>
+        /// </summary>
+        /// <param name="host">The host.</param>
+        /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
+        /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the host is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
+        /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
+        private static async Task TeardownAsync(this IHost host, CancellationToken cancellationToken = default)
+        {
+            if (host == null) throw new ArgumentNullException(nameof(host));
+
+            await using var scope = host.Services.CreateAsyncScope();
+            var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
+                ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
+
+            await rootInitializer.TeardownAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         /// <summary>
         /// Initializes and runs the application, by first calling all registered async initializers.
@@ -48,21 +67,17 @@ namespace Microsoft.Extensions.Hosting
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
 
-            await using var scope = host.Services.CreateAsyncScope();
-            var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
-                ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
-
             await using (host as IAsyncDisposable)
             {
                 try
                 {
-                    await rootInitializer.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    await host.InitAsync(cancellationToken).ConfigureAwait(false);
                     await host.StartAsync(cancellationToken).ConfigureAwait(false);
                     await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {
-                    await rootInitializer.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
+                    await host.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
                 }
             }
         }
