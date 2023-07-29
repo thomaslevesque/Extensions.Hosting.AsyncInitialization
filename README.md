@@ -4,10 +4,7 @@
 [![AppVeyor build](https://img.shields.io/appveyor/ci/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization)
 [![AppVeyor tests](https://img.shields.io/appveyor/tests/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization/build/tests)
 
-A simple helper to perform async application initialization for the generic host in .NET Core 2.1 or higher (including ASP.NET Core 3).
-
-***Note:** ASP.NET Core 2.x doesn't use the generic host. If you need to perform async initialization in ASP.NET Core 2.x, use
-[AspNetCore.AsyncInitialization](https://github.com/thomaslevesque/AspNetCore.AsyncInitialization/) instead.*
+A simple helper to perform async application initialization for the generic host in .NET 6.0 or higher (e.g. in ASP.NET Core apps).
 
 ## Usage
 
@@ -76,8 +73,5 @@ A simple helper to perform async application initialization for the generic host
         await host.RunAsync();
     }
     ```
-
-
-(Note that you need to [set the C# language version to 7.1 or higher in your project](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/configure-language-version#edit-the-csproj-file) to enable the "async Main" feature.)
 
 This will run each initializer, in the order in which they were registered.
