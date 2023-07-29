@@ -1,12 +1,13 @@
 ﻿using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using static Bullseye.Targets;
 using static SimpleExec.Command;
 
 namespace build
 {
-    [Command(ThrowOnUnexpectedArgument = false)]
+    [Command(UnrecognizedArgumentHandling = UnrecognizedArgumentHandling.CollectAndContinue)]
     [SuppressDefaultHelpOption]
     class Build
     {
@@ -21,17 +22,8 @@ namespace build
 
         public string[] RemainingArguments { get; } = null;
 
-        public void OnExecute(CommandLineApplication app)
+        public async Task OnExecuteAsync(CommandLineApplication app)
         {
-            if (ShowHelp)
-            {
-                app.ShowHelp();
-                app.Out.WriteLine("Bullseye help:");
-                app.Out.WriteLine();
-                RunTargetsWithoutExiting(new[] { "-h" });
-                return;
-            }
-
             Directory.SetCurrentDirectory(GetSolutionDirectory());
 
             string artifactsDir = Path.GetFullPath("artifacts");
@@ -75,7 +67,16 @@ namespace build
 
             Target("default", DependsOn("test", "pack"));
 
-            RunTargetsWithoutExiting(RemainingArguments);
+            if (ShowHelp)
+            {
+                app.ShowHelp();
+                app.Out.WriteLine("Bullseye help:");
+                app.Out.WriteLine();
+                await RunTargetsAndExitAsync(new[] { "-h" });
+                return;
+            }
+
+            await RunTargetsAndExitAsync(RemainingArguments);
         }
 
         private static string GetSolutionDirectory() =>
