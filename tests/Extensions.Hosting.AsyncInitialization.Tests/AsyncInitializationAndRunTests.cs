@@ -1,5 +1,4 @@
 ﻿using FakeItEasy;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -244,19 +243,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 ))
                 .Build();
 
-        private static IHost CreateWebHost(Action<IServiceCollection> configureServices, bool validateScopes = false)
-        {
-            var builder = WebApplication.CreateBuilder();
-            builder.Host
-                .ConfigureServices(configureServices)
-                .UseServiceProviderFactory(new DefaultServiceProviderFactory(
-                    new ServiceProviderOptions
-                    {
-                        ValidateScopes = validateScopes
-                    }
-                ));
-            return builder.Build();
-        }
+        
 
         public interface IDependency
         {
