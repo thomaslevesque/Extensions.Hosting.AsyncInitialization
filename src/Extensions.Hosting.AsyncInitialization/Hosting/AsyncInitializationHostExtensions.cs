@@ -33,26 +33,6 @@ namespace Microsoft.Extensions.Hosting
         }
 
         /// <summary>
-        /// Performs teardown, by calling all registered async initializers that implement <see cref="IAsyncTeardown"/>
-        /// </summary>
-        /// <param name="host">The host.</param>
-        /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
-        /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the host is null.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
-        /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
-        private static async Task TeardownAsync(this IHost host, CancellationToken cancellationToken = default)
-        {
-            if (host == null) throw new ArgumentNullException(nameof(host));
-
-            await using var scope = host.Services.CreateAsyncScope();
-            var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
-                ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
-
-            await rootInitializer.TeardownAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Initializes and runs the application, by first calling all registered async initializers.
         /// After the host terminates, any registered initializers that implement <see cref="IAsyncTeardown"/> are called to perform the teardown.
         /// The <paramref name="host"/> instance is disposed of after running.
@@ -67,18 +47,60 @@ namespace Microsoft.Extensions.Hosting
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
 
-            await using (host as IAsyncDisposable)
+            await using var scope = host.Services.CreateAsyncScope();
+            var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
+                ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
+
+
+            await using (host.AsAsyncDisposable().ConfigureAwait(false))
             {
                 try
                 {
-                    await host.InitAsync(cancellationToken).ConfigureAwait(false);
+                    await rootInitializer.InitializeAsync(cancellationToken).ConfigureAwait(false);
                     await host.StartAsync(cancellationToken).ConfigureAwait(false);
                     await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {
-                    await host.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
+                    await rootInitializer.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
                 }
+            }
+        }
+
+        // wraps an IHost instance in an IAsyncDisposable 
+        private static IAsyncDisposable AsAsyncDisposable(this IHost host)
+        {
+            if (host == null) throw new ArgumentNullException(nameof(host));
+            return AsyncDisposableHostWrapper.Create(host);
+        }
+
+        // IAsyncDisposable wrapper for IHost
+        private class AsyncDisposableHostWrapper : IHost, IAsyncDisposable
+        {
+            private readonly IHost _host;
+            public AsyncDisposableHostWrapper(IHost host)
+            {
+                _host = host ?? throw new ArgumentNullException(nameof(host));
+            }
+
+            public static AsyncDisposableHostWrapper Create(IHost host) => new(host);
+
+            public IServiceProvider Services => _host.Services;
+
+            public Task StartAsync(CancellationToken cancellationToken = default) => _host.StartAsync(cancellationToken);
+            
+            public Task StopAsync(CancellationToken cancellationToken = default) => _host.StopAsync(cancellationToken);
+
+            public void Dispose() => _host.Dispose();
+            
+            public ValueTask DisposeAsync()
+            {
+                if (_host is IAsyncDisposable asyncDisposable)
+                {
+                    return asyncDisposable.DisposeAsync();
+                }
+                _host.Dispose();
+                return default;
             }
         }
     }
