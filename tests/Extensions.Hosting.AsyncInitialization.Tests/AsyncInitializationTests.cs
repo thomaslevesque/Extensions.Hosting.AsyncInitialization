@@ -5,6 +5,7 @@ using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
+using static Extensions.Hosting.AsyncInitialization.Tests.CommonTestTypes;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
@@ -126,34 +127,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var exception = await Record.ExceptionAsync(() => host.InitAsync());
             Assert.IsType<InvalidOperationException>(exception);
             Assert.Equal("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.", exception.Message);
-        }
-
-        private static IHost CreateHost(Action<IServiceCollection> configureServices, bool validateScopes = false) =>
-            new HostBuilder()
-                .ConfigureServices(configureServices)
-                .UseServiceProviderFactory(new DefaultServiceProviderFactory(
-                    new ServiceProviderOptions
-                    {
-                        ValidateScopes = validateScopes
-                    }
-                ))
-                .Build();
-
-        public interface IDependency
-        {
-        }
-
-        public class Initializer : IAsyncInitializer
-        {
-            // ReSharper disable once NotAccessedField.Local
-            private readonly IDependency _dependency;
-
-            public Initializer(IDependency dependency)
-            {
-                _dependency = dependency;
-            }
-
-            public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

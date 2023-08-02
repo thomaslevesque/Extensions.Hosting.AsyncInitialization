@@ -6,21 +6,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+using static Extensions.Hosting.AsyncInitialization.Tests.CommonTestTypes;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
     public class AsyncInitializationAndRunTests 
     {
-        private readonly ITestOutputHelper _testOutput;
         public AsyncInitializationAndRunTests(ITestOutputHelper testOutput)
         {
-            _testOutput = testOutput;
+            OutputHelper = testOutput;
         }
+
+        private ITestOutputHelper OutputHelper { get; }
 
         [Fact]
         public async Task InitAndRunAsync_throws_InvalidOperationException_when_services_are_not_registered()
         {
-            var host = CreateHost(services => { });
+            var host = CommonTestTypes.CreateHost(services => { });
             var exception = await Record.ExceptionAsync(() => host.InitAsync());
             Assert.IsType<InvalidOperationException>(exception);
             Assert.Equal("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.", exception.Message);
@@ -33,7 +35,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddScoped(sp => A.Fake<IDependency>());
                 services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
@@ -48,7 +50,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddScoped<IDependency,DisposableDependency>();
                 services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
@@ -63,7 +65,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddSingleton<IDependency, DisposableDependency>();
                 services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper   );
                 services.AddHostedService<TestService>();
             });
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
@@ -83,7 +85,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
                 services.AddAsyncInitializer(initializer3);
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
 
@@ -112,7 +114,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
                 services.AddAsyncInitializer(initializer3);
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
 
@@ -136,7 +138,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer);
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
             
@@ -155,7 +157,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddScoped<IDependency, DisposableDependency>();
                 services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             }, true);
 
@@ -176,7 +178,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer);
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
 
@@ -197,7 +199,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer);
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
 
@@ -215,7 +217,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
             
@@ -234,7 +236,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer);
-                services.AddTransient(factory => _testOutput);
+                services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
 
@@ -244,109 +246,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             A.CallTo(() => initializer.InitializeAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
             A.CallTo(() => initializer.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
-        }
-
-
-        private static IHost CreateHost(Action<IServiceCollection> configureServices, bool validateScopes = false) =>
-            new HostBuilder()
-                .ConfigureServices(configureServices)
-                .UseServiceProviderFactory(new DefaultServiceProviderFactory(
-                    new ServiceProviderOptions
-                    {
-                        ValidateScopes = validateScopes
-                    }
-                ))
-                .Build();
-
-        
-
-        public interface IDependency
-        {
-        }
-
-        public interface IDisposableDependency : IDependency, IDisposable
-        {
-            IServiceScope SomeMethod();
-        }
-
-        public class InitializerWithTearDown : IAsyncTeardown
-        {
-            // ReSharper disable once NotAccessedField.Local
-            private readonly IDependency _dependency;
-            private readonly ITestOutputHelper _output;
-
-            public InitializerWithTearDown(IDependency dependency, ITestOutputHelper output) 
-            {
-                _dependency = dependency;
-                _output = output;
-            }
-
-            public Task InitializeAsync(CancellationToken cancellationToken)
-            {
-                if (_dependency is IDisposableDependency dep)
-                {
-                    _= dep.SomeMethod();
-                    _output.WriteLine("InitializeAsync Call to DisposableDependency");
-                }
-                return Task.CompletedTask;
-            }
-
-            public Task TeardownAsync(CancellationToken cancellationToken)
-            {
-                if (_dependency is IDisposableDependency dep)
-                {
-                    _= dep.SomeMethod();
-                    _output.WriteLine("TeardownAsync Call to DisposableDependency");
-                }
-                return Task.CompletedTask;
-            }
-        }
-
-
-       
-
-        public class DisposableDependency : IDisposableDependency
-        {
-            private readonly ITestOutputHelper _output;
-           
-            public DisposableDependency(IServiceProvider serviceProvider, ITestOutputHelper output)
-            {
-                ServiceProvider = serviceProvider;
-                _output = output;
-            }
-
-            public IServiceProvider ServiceProvider { get; private set; }
-
-            public IServiceScope SomeMethod()
-            {
-                return ServiceProvider.CreateScope();
-            }
-
-            public void Dispose()
-            {
-                _output.WriteLine("Disposing DisposableDependency");
-            }
-        }
-
-        public class TestService : BackgroundService
-        {
-            private readonly ITestOutputHelper _output;
-            public TestService(ITestOutputHelper output) 
-            {
-                _output = output;
-            }
-
-            protected override Task ExecuteAsync(CancellationToken stoppingToken)
-            {
-                //Throwing exception to stop service
-                throw new Exception("host");
-            }
-
-            public override void Dispose()
-            {
-                _output.WriteLine("Disposing TestService");
-                base.Dispose();
-            }
         }
     }
 }
