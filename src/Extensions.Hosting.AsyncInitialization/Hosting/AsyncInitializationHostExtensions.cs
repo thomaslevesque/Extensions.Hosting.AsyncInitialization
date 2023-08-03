@@ -70,29 +70,17 @@ namespace Microsoft.Extensions.Hosting
         // wraps an IHost instance in an IAsyncDisposable 
         private static IAsyncDisposable AsAsyncDisposable(this IHost host)
         {
-            if (host == null) throw new ArgumentNullException(nameof(host));
-            return AsyncDisposableHostWrapper.Create(host);
+            return host as IAsyncDisposable ?? new AsyncDisposableHostWrapper(host);
         }
 
         // IAsyncDisposable wrapper for IHost
-        private class AsyncDisposableHostWrapper : IHost, IAsyncDisposable
+        private class AsyncDisposableHostWrapper : IAsyncDisposable
         {
             private readonly IHost _host;
             public AsyncDisposableHostWrapper(IHost host)
             {
                 _host = host ?? throw new ArgumentNullException(nameof(host));
             }
-
-            public static AsyncDisposableHostWrapper Create(IHost host) => new(host);
-
-            public IServiceProvider Services => _host.Services;
-
-            public Task StartAsync(CancellationToken cancellationToken = default) => _host.StartAsync(cancellationToken);
-            
-            public Task StopAsync(CancellationToken cancellationToken = default) => _host.StopAsync(cancellationToken);
-
-            public void Dispose() => _host.Dispose();
-            
             public ValueTask DisposeAsync()
             {
                 if (_host is IAsyncDisposable asyncDisposable)
