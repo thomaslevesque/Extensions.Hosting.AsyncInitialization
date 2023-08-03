@@ -12,14 +12,20 @@
     <PackageTags>.net core;hosting;async;initialization</PackageTags>
     <RepositoryUrl>https://github.com/thomaslevesque/Extensions.Hosting.AsyncInitialization</RepositoryUrl>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <Configurations>Debug;Release;ReleaseLegacyHosting</Configurations>
+		<MSEHostingVersion Condition="'$(Configuration)' == 'ReleaseLegacyHosting'">2.1.0</MSEHostingVersion>
+		<MSEHostingVersion Condition="'$(Configuration)' != 'ReleaseLegacyHosting'">6.0.0</MSEHostingVersion>
   </PropertyGroup>
 
+		
   <PropertyGroup>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Extensions.Hosting.AsyncInitialization.xml</DocumentationFile>
   </PropertyGroup>
 
+		
+		
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MSEHostingVersion)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
@@ -28,5 +34,5 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
+		
 </Project>

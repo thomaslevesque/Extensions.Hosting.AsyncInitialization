@@ -5,19 +5,23 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <Configurations>Debug;Release;ReleaseLegacyHosting</Configurations>
+		<MSEHostingVersion Condition="'$(Configuration)' == 'ReleaseLegacyHosting'">2.1.0</MSEHostingVersion>
+		<MSEHostingVersion Condition="'$(Configuration)' != 'ReleaseLegacyHosting'">6.0.0</MSEHostingVersion>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FakeItEasy" Version="7.4.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.3" />
-    <PackageReference Include="xunit" Version="2.5.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		
+		<ItemGroup>
+				<PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MSEHostingVersion)" />
+				<PackageReference Include="FakeItEasy" Version="7.4.0" />
+				<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.3" />
+        <PackageReference Include="xunit" Version="2.5.0" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.0">
+						<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
-
+		
   <ItemGroup>
     <ProjectReference Include="..\..\src\Extensions.Hosting.AsyncInitialization\Extensions.Hosting.AsyncInitialization.csproj" />
   </ItemGroup>
