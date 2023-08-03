@@ -161,6 +161,8 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddHostedService<TestService>();
             }, true);
 
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
+
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
             Assert.IsType<Exception>(exception);
             Assert.Equal("host", exception.Message);
@@ -181,6 +183,8 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
+
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
             Assert.IsType<Exception>(exception);
@@ -203,6 +207,8 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddHostedService<TestService>();
             });
 
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
+
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
             Assert.IsType<Exception>(exception);
             Assert.Equal("oops", exception.Message);
@@ -220,7 +226,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
-            
+
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
+
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync(new CancellationToken(true)));
             Assert.IsType<OperationCanceledException>(exception);
 
