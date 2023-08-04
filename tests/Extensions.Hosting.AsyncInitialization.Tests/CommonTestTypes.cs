@@ -115,8 +115,8 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         public class SyncDisposableHostWrapper : IHost, IDisposable
         {
             private readonly IHost _host;
-            public SyncDisposableHostWrapper(IHost host) 
-            { 
+            public SyncDisposableHostWrapper(IHost host)
+            {
                 _host = host ?? throw new ArgumentNullException(nameof(host));
             }
 
@@ -138,8 +138,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             }
         }
 
-        public static IHost CreateHost(Action<IServiceCollection> configureServices, bool validateScopes = false) =>
-          new HostBuilder()
+        public static IHost CreateHost(Action<IServiceCollection> configureServices, bool validateScopes = false, bool forceIDisposableHost = false)
+        {
+            var host = new HostBuilder()
               .ConfigureServices(configureServices)
               .UseServiceProviderFactory(new DefaultServiceProviderFactory(
                   new ServiceProviderOptions
@@ -148,6 +149,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                   }
               ))
               .Build();
+
+            return forceIDisposableHost ? new SyncDisposableHostWrapper(host) : host;
+        }
 
     }
 }

@@ -189,10 +189,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddAsyncInitializer(initializer);
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
-            });
-
-            if (forceIDisposableHost)
-                host = new SyncDisposableHostWrapper(host);
+            }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
@@ -217,10 +214,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddAsyncInitializer(initializer);
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
-            });
-
-            if (forceIDisposableHost)
-                host = new SyncDisposableHostWrapper(host);
+            }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
@@ -242,10 +236,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
-            });
-
-            if (forceIDisposableHost)
-                host = new SyncDisposableHostWrapper(host);
+            }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
