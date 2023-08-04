@@ -150,8 +150,10 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             A.CallTo(() => initializer.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
         }
 
-        [Fact]
-        public async Task Host_is_disposed_after_successful_run()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Host_is_disposed_after_successful_run(bool forceIDisposableHost)
         {
             var host = CreateHost(services =>
             {
@@ -160,6 +162,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             }, true);
+
+            if (forceIDisposableHost) 
+                host = new SyncDisposableHostWrapper(host);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
@@ -171,8 +176,10 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<ObjectDisposedException>(exception);
         }
 
-        [Fact]
-        public async Task Host_is_disposed_after_failing_teardown()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Host_is_disposed_after_failing_teardown(bool forceIDisposableHost)
         {
             var initializer = A.Fake<IAsyncTeardown>();
             A.CallTo(() => initializer.TeardownAsync(default)).ThrowsAsync(() => new Exception("oops"));
@@ -184,6 +191,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddHostedService<TestService>();
             });
 
+            if (forceIDisposableHost)
+                host = new SyncDisposableHostWrapper(host);
+
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
@@ -194,8 +204,10 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<ObjectDisposedException>(exception);
         }
 
-        [Fact]
-        public async Task Host_is_disposed_after_failing_initializer()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Host_is_disposed_after_failing_initializer(bool forceIDisposableHost)
         {
             var initializer = A.Fake<IAsyncTeardown>();
             A.CallTo(() => initializer.InitializeAsync(default)).ThrowsAsync(() => new Exception("oops"));
@@ -207,6 +219,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddHostedService<TestService>();
             });
 
+            if (forceIDisposableHost)
+                host = new SyncDisposableHostWrapper(host);
+
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
@@ -217,8 +232,10 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<ObjectDisposedException>(exception);
         }
 
-        [Fact]
-        public async Task Host_is_disposed_after_cancellation()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Host_is_disposed_after_cancellation(bool forceIDisposableHost)
         {
             var host = CreateHost(services =>
             {
@@ -226,6 +243,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddTransient(factory => OutputHelper);
                 services.AddHostedService<TestService>();
             });
+
+            if (forceIDisposableHost)
+                host = new SyncDisposableHostWrapper(host);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 

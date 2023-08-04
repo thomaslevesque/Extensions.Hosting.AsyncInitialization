@@ -112,6 +112,32 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             }
         }
 
+        public class SyncDisposableHostWrapper : IHost, IDisposable
+        {
+            private readonly IHost _host;
+            public SyncDisposableHostWrapper(IHost host) 
+            { 
+                _host = host ?? throw new ArgumentNullException(nameof(host));
+            }
+
+            public IServiceProvider Services => _host.Services;
+
+            public void Dispose()
+            {
+                _host.Dispose();
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken = default)
+            {
+                return _host.StartAsync(cancellationToken);
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken = default)
+            {
+                return _host.StopAsync(cancellationToken);
+            }
+        }
+
         public static IHost CreateHost(Action<IServiceCollection> configureServices, bool validateScopes = false) =>
           new HostBuilder()
               .ConfigureServices(configureServices)
