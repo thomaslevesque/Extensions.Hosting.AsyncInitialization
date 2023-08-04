@@ -88,7 +88,7 @@ namespace Microsoft.Extensions.Hosting
                     return asyncDisposable.DisposeAsync();
                 }
                 _host.Dispose();
-                return default;
+                return ValueTask.CompletedTask;
             }
         }
     }
