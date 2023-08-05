@@ -4,6 +4,7 @@ using System;
 using System.Threading.Tasks;
 using System.Threading;
 using Xunit.Abstractions;
+using System.Collections.Generic;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
@@ -14,6 +15,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         {
 
         }
+
+        public class Dependency : IDependency
+        { }
 
         public interface IDisposableDependency : IDependency, IDisposable
         {
@@ -153,5 +157,26 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             return forceIDisposableHost ? new SyncDisposableHostWrapper(host) : host;
         }
 
+        public class XUnitTracingInterceptor : ITestOutputHelper
+        {
+            private readonly ITestOutputHelper _outputHelper;
+            public List<string> Outputs { get; } = new();
+            public XUnitTracingInterceptor(ITestOutputHelper outputHelper)
+            {
+                _outputHelper = outputHelper;
+            }   
+
+            public void WriteLine(string message)
+            {
+                Outputs.Add(message);
+                _outputHelper.WriteLine(message);   
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                var message = String.Format(format, args);
+                WriteLine(message);
+            }
+        }
     }
 }

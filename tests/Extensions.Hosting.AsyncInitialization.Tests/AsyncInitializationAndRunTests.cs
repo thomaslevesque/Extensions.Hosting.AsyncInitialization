@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -265,6 +266,25 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             A.CallTo(() => initializer.InitializeAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
             A.CallTo(() => initializer.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
+        }
+
+        [Fact]
+        public async Task Scoped_disposable_dependency_is_disposed_once()
+        {
+            var output = new XUnitTracingInterceptor(OutputHelper);
+            var host = CreateHost(services =>
+            {
+                services.AddScoped<IDependency, DisposableDependency>();
+                services.AddAsyncInitializer<InitializerWithTearDown>();
+                services.AddSingleton<ITestOutputHelper>(output);
+                services.AddHostedService<TestService>();
+            });
+
+            var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync());
+            Assert.IsType<Exception>(exception);
+            Assert.Equal("host", exception.Message);
+
+            Assert.Single(output.Outputs.FindAll(x => x.Equals("Disposing DisposableDependency")));
         }
     }
 }
