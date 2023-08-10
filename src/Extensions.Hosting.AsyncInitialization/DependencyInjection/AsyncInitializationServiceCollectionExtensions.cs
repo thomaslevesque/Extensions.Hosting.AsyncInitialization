@@ -122,6 +122,23 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddSingleton<IAsyncInitializer>(new DelegateAsyncInitializer(initializer));
         }
 
+        /// <summary>
+        /// Adds an async initializer with teardown whose implementations are the specified delegates.
+        /// </summary>
+        /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
+        /// <param name="initializer">The delegate that performs async initialization.</param>
+        /// <param name="teardown">The delegate that performs async teardown.</param>
+        /// <returns>A reference to this instance after the operation has completed.</returns>
+        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<CancellationToken, Task> initializer, Func<CancellationToken, Task> teardown)
+        {
+            if (initializer == null)
+                throw new ArgumentNullException(nameof(initializer));
+
+            return services
+                .AddAsyncInitialization()
+                .AddSingleton<IAsyncInitializer>(new DelegateAsyncTeardown(initializer, teardown));
+        }
+
         private class DelegateAsyncInitializer : IAsyncInitializer
         {
             private readonly Func<CancellationToken, Task> _initializer;
@@ -134,6 +151,28 @@ namespace Microsoft.Extensions.DependencyInjection
             public Task InitializeAsync(CancellationToken cancellationToken)
             {
                 return _initializer(cancellationToken);
+            }
+        }
+
+        private class DelegateAsyncTeardown : IAsyncTeardown
+        {
+            private readonly Func<CancellationToken, Task> _initializer;
+            private readonly Func<CancellationToken, Task> _teardown;
+
+            public DelegateAsyncTeardown(Func<CancellationToken, Task> initializer, Func<CancellationToken, Task> teardown)
+            {
+                _initializer = initializer;
+                _teardown = teardown;
+            }
+
+            public Task InitializeAsync(CancellationToken cancellationToken)
+            {
+                return _initializer(cancellationToken);
+            }
+
+            public Task TeardownAsync(CancellationToken cancellationToken)
+            {
+                return _teardown(cancellationToken);
             }
         }
     }
