@@ -1,10 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit.Abstractions;
-using System.Collections.Generic;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
@@ -97,22 +96,17 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
         public class TestService : BackgroundService
         {
-            private readonly ITestOutputHelper _output;
-            public TestService(ITestOutputHelper output)
+            private readonly IHostApplicationLifetime _lifetime;
+            public TestService(IHostApplicationLifetime lifetime)
             {
-                _output = output;
+                _lifetime = lifetime;
             }
 
             protected override Task ExecuteAsync(CancellationToken stoppingToken)
             {
-                //Throwing exception to stop service
-                throw new Exception("host");
-            }
-
-            public override void Dispose()
-            {
-                _output.WriteLine("Disposing TestService");
-                base.Dispose();
+                stoppingToken.ThrowIfCancellationRequested();
+                _lifetime.StopApplication();
+                return Task.CompletedTask;
             }
         }
 
@@ -155,28 +149,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
               .Build();
 
             return forceIDisposableHost ? new SyncDisposableHostWrapper(host) : host;
-        }
-
-        public class XUnitTracingInterceptor : ITestOutputHelper
-        {
-            private readonly ITestOutputHelper _outputHelper;
-            public List<string> Outputs { get; } = new();
-            public XUnitTracingInterceptor(ITestOutputHelper outputHelper)
-            {
-                _outputHelper = outputHelper;
-            }   
-
-            public void WriteLine(string message)
-            {
-                Outputs.Add(message);
-                _outputHelper.WriteLine(message);   
-            }
-
-            public void WriteLine(string format, params object[] args)
-            {
-                var message = String.Format(format, args);
-                WriteLine(message);
-            }
         }
     }
 }

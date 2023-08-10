@@ -74,107 +74,59 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             
         }
 
-        [Fact]
-        public async Task TeardownAsync_after_StartAsync_does_not_fail()
-        {
-            var initializer = A.Fake<IAsyncTeardown>();
-            var host = CreateHost(services => services.AddAsyncInitializer(initializer));   
+        
 
-            await host.InitAsync();
-            await host.StartAsync();
-            await host.WaitForShutdownAsync(new CancellationToken(true));
+        [Fact]
+        public async Task Delegate_teardown_is_called()
+        {
+            var initializer = A.Fake<Func<CancellationToken, Task>>();
+            var teardown = A.Fake<Func<CancellationToken, Task>>();
+
+            var host = CreateHost(services => services.AddAsyncInitializer(initializer, teardown));
+
             await host.TeardownAsync();
 
-            A.CallTo(() => initializer.InitializeAsync(default)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => initializer.TeardownAsync(default)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer(CancellationToken.None)).MustNotHaveHappened();
+            A.CallTo(() => teardown(CancellationToken.None)).MustHaveHappenedOnceExactly();
         }
 
         [Fact]
-        public async Task Singleton_disposable_dependency_is_not_disposed()
+        public async Task Failing_teardown_makes_teardown_fail()
         {
-            var dependency = A.Fake<IDisposableDependency>();
+            var initializer1 = A.Fake<IAsyncTeardown>();
+            var initializer2 = A.Fake<IAsyncTeardown>();
+            var initializer3 = A.Fake<IAsyncTeardown>();
+
+            A.CallTo(() => initializer2.TeardownAsync(default)).ThrowsAsync(() => new Exception("oops"));
 
             var host = CreateHost(services =>
             {
-                services.AddSingleton<IDependency>(factory => dependency);
-                services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddTransient<ITestOutputHelper>(factory => OutputHelper);
-            }, true);
+                services.AddAsyncInitializer(initializer1);
+                services.AddAsyncInitializer(initializer2);
+                services.AddAsyncInitializer(initializer3);
+            });
 
-            await host.InitAsync();
-            await host.TeardownAsync();
+            var exception = await Record.ExceptionAsync(() => host.TeardownAsync());
+            Assert.IsType<Exception>(exception);
+            Assert.Equal("oops", exception.Message);
 
-            A.CallTo(() => dependency.Dispose()).MustNotHaveHappened();
+            A.CallTo(() => initializer3.TeardownAsync(default)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer1.TeardownAsync(default)).MustNotHaveHappened();
         }
 
         [Fact]
-        public async Task Scoped_disposable_dependency_is_disposed_twice()
+        public async Task teardown_with_scoped_dependency_is_resolved()
         {
-            var dependency = A.Fake<IDisposableDependency>();   
+            var host = CreateHost(
+                services =>
+                {
+                    services.AddScoped(sp => A.Fake<IDependency>());
+                    services.AddAsyncInitializer<InitializerWithTearDown>();
+                    services.AddTransient<ITestOutputHelper>(factory => OutputHelper);
+                },
+                true);
 
-            var host = CreateHost(services =>
-            {
-                services.AddScoped<IDependency>(factory => dependency);
-                services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddTransient<ITestOutputHelper>(factory => OutputHelper);
-            }, true);
-
-            await host.InitAsync();
             await host.TeardownAsync();
-
-            A.CallTo(() => dependency.Dispose()).MustHaveHappenedTwiceExactly();
-            
-        }
-
-        [Fact]
-        public async Task Singleton_Initializer_does_no_dispose_singleton_dependency()
-        {
-            var dependency = A.Fake<IDisposableDependency>();
-
-            var host = CreateHost(services =>
-            {
-                services.AddSingleton<IDependency>(factory => dependency);
-                services.AddSingleton<IAsyncTeardown, InitializerWithTearDown>();
-                services.AddAsyncInitializer(factory => factory.GetRequiredService<IAsyncTeardown>());
-                services.AddTransient<ITestOutputHelper>(factory => OutputHelper);
-            }, true);
-
-            await host.InitAsync();
-            await host.TeardownAsync();
-
-            A.CallTo(() => dependency.Dispose()).MustNotHaveHappened();
-        }
-
-        [Fact]
-        public async Task Singleton_Initializer_is_called()
-        {
-            var initializer = A.Fake<IAsyncTeardown>();
-            
-            var host = CreateHost(services =>
-            {
-                services.AddAsyncInitializer(initializer);
-            }, true);
-
-            await host.InitAsync();
-            await host.TeardownAsync();
-
-            A.CallTo(() => initializer.InitializeAsync(default)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => initializer.TeardownAsync(default)).MustHaveHappenedOnceExactly();
-        }
-
-        [Fact]
-        public async Task Captive_Dependency()
-        {
-            var host = CreateHost(services =>
-            {
-                services.AddScoped<IDependency>(factory => A.Fake<IDisposableDependency>());
-                services.AddSingleton<IAsyncTeardown, InitializerWithTearDown>();
-                services.AddAsyncInitializer(factory => factory.GetRequiredService<IAsyncTeardown>());
-                services.AddTransient<ITestOutputHelper>(factory => OutputHelper);
-            }, true);
-
-            await Assert.ThrowsAsync<InvalidOperationException>(() => host.TeardownAsync());
-
         }
 
         [Fact]
