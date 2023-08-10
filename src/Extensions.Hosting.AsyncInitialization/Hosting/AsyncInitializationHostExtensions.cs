@@ -69,22 +69,18 @@ namespace Microsoft.Extensions.Hosting
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
 
-            await using var scope = host.Services.CreateAsyncScope();
-            var rootInitializer = scope.ServiceProvider.GetService<RootInitializer>()
-                ?? throw new InvalidOperationException("The async initialization service isn't registered, register it by calling AddAsyncInitialization() on the service collection or by adding an async initializer.");
-
-
             await using (host.AsAsyncDisposable().ConfigureAwait(false))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    await rootInitializer.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    await host.InitAsync(cancellationToken).ConfigureAwait(false);
                     await host.StartAsync(cancellationToken).ConfigureAwait(false);
                     await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {
-                    await rootInitializer.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
+                    await host.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
                 }
             }
         }
