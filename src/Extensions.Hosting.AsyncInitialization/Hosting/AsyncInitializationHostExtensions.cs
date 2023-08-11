@@ -43,7 +43,7 @@ namespace Microsoft.Extensions.Hosting
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the host instance has been disposed.</exception>
         /// <remarks>
-        /// Attention: This method can only be used in conjuntion with manually calling StartAsync() and WaitForShutdownAsync() on the <paramref name="host"/> instance and before disposing the host..
+        /// Attention: This method can only be used in combination with manually calling StartAsync() and WaitForShutdownAsync() on the <paramref name="host"/> instance and before disposing the host.
         /// Calling this method after IHost.RunAsync() will throw an <see cref="ObjectDisposedException"/> as the <paramref name="host"/> instance is disposed after running.
         /// </remarks>
         public static async Task TeardownAsync(this IHost host, CancellationToken cancellationToken = default)
