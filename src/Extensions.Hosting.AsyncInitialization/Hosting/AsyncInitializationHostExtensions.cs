@@ -17,7 +17,7 @@ namespace Microsoft.Extensions.Hosting
         /// </summary>
         /// <param name="host">The host.</param>
         /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
-        /// <returns>A task that represents the initialization completion.</returns>
+        /// <returns>A <see cref="Task"/> that represents the initialization completion.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the host is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
@@ -37,12 +37,15 @@ namespace Microsoft.Extensions.Hosting
         /// </summary>
         /// <param name="host">The host.</param>
         /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
-        /// <returns>A task that represents the teardown completion.</returns>
+        /// <returns>A <see cref="Task"/> that represents the teardown completion.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the host is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the host instance has been disposed.</exception>
-        /// <remarks>Caution: Calling this method after IHost.RunAsync() will throw an <see cref="ObjectDisposedException"/> as the <paramref name="host"/> instance is disposed after running.</remarks>
+        /// <remarks>
+        /// Attention: This method can only be used in conjuntion with manually calling StartAsync() and WaitForShutdownAsync() on the <paramref name="host"/> instance and before disposing the host..
+        /// Calling this method after IHost.RunAsync() will throw an <see cref="ObjectDisposedException"/> as the <paramref name="host"/> instance is disposed after running.
+        /// </remarks>
         public static async Task TeardownAsync(this IHost host, CancellationToken cancellationToken = default)
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
