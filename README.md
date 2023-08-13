@@ -4,7 +4,7 @@
 [![AppVeyor build](https://img.shields.io/appveyor/ci/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization)
 [![AppVeyor tests](https://img.shields.io/appveyor/tests/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization/build/tests)
 
-A simple helper to perform async application initialization for the generic host in .NET 6.0 or higher (e.g. in ASP.NET Core apps).
+A simple helper to perform async application initialization and teardown for the generic host in .NET 6.0 or higher (e.g. in ASP.NET Core apps).
 
 ## Basic usage
 
@@ -47,29 +47,13 @@ A simple helper to perform async application initialization for the generic host
 
 4. In the `Program` class, replace the call to `host.RunAsync()` with `host.InitAndRunAsync()`:
 
-    ```csharp
-    public static async Task Main(string[] args)
-    {
-        var host = CreateHostBuilder(args).Build();
-        await host.InitAndRunAsync();
-    }
-    ```
-
-    You can also pass a `CancellationToken` in order to propagate notifications to abort execution if needed. Cancellation will be propagated to the initializers.
-
-    In the following example, the initialization will be cancelled when `Ctrl + C` keys are pressed :
-    ```csharp
-    public static async Task Main(string[] args)
-    {
-        using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
-        // The following line will hook `Ctrl` + `C` to the cancellation token. 
-        Console.CancelKeyPress += (source, args) => cancellationTokenSource.Cancel();
-
-        var host = CreateHostBuilder(args).Build();
-        await host.InitAndRunAsync(cancellationTokenSource.Token);
-    }
-    ```
+```csharp
+public static async Task Main(string[] args)
+{
+    var host = CreateHostBuilder(args).Build();
+    await host.InitAndRunAsync();
+}
+```
 
 This will run each initializer, in the order in which they were registered.
 
@@ -136,6 +120,24 @@ await using (var host = CreateHostBuilder(args).Build())
     await host.StartAsync();
     await host.WaitForShutdownAsync();
     await host.TeardownAsync();
+}
+```
+
+## Cancellation
+
+The `InitAndRunAsync`, `InitAsync` and `TeardownAsync` all support passing a cancellation token to abort execution if needed. Cancellation will be propagated to the initializers.
+
+In the following example, execution (including initialization and teardown) will be aborted when `Ctrl + C` keys are pressed :
+```csharp
+public static async Task Main(string[] args)
+{
+    using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+    // The following line will hook `Ctrl` + `C` to the cancellation token.
+    Console.CancelKeyPress += (source, args) => cancellationTokenSource.Cancel();
+
+    var host = CreateHostBuilder(args).Build();
+    await host.InitAndRunAsync(cancellationTokenSource.Token);
 }
 ```
 
