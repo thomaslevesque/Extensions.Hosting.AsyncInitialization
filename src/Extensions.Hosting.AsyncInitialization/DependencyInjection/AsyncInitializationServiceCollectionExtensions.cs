@@ -31,13 +31,14 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <typeparam name="TInitializer">The type of the async initializer to add.</typeparam>
         /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
+        /// <param name="lifetime">The initializer's lifetime. Defaults to <see cref="ServiceLifetime.Transient"/>.</param>
         /// <returns>A reference to this instance after the operation has completed.</returns>
-        public static IServiceCollection AddAsyncInitializer<TInitializer>(this IServiceCollection services)
+        public static IServiceCollection AddAsyncInitializer<TInitializer>(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Transient)
             where TInitializer : class, IAsyncInitializer
         {
             return services
                 .AddAsyncInitialization()
-                .AddTransient<IAsyncInitializer, TInitializer>();
+                .AddServiceDescriptor(ServiceDescriptor.Describe(typeof(IAsyncInitializer), typeof(TInitializer), lifetime));
         }
 
         /// <summary>
@@ -63,15 +64,16 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
         /// <param name="implementationFactory">The factory that creates the async initializer.</param>
+        /// <param name="lifetime">The initializer's lifetime. Defaults to <see cref="ServiceLifetime.Transient"/>.</param>
         /// <returns>A reference to this instance after the operation has completed.</returns>
-        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<IServiceProvider, IAsyncInitializer> implementationFactory)
+        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Func<IServiceProvider, IAsyncInitializer> implementationFactory, ServiceLifetime lifetime = ServiceLifetime.Transient)
         {
             if (implementationFactory == null)
                 throw new ArgumentNullException(nameof(implementationFactory));
 
             return services
                 .AddAsyncInitialization()
-                .AddTransient(implementationFactory);
+                .AddServiceDescriptor(ServiceDescriptor.Describe(typeof(IAsyncInitializer), implementationFactory, lifetime));
         }
 
         /// <summary>
@@ -79,15 +81,16 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
         /// <param name="initializerType">The type of the async initializer to add.</param>
+        /// <param name="lifetime">The initializer's lifetime. Defaults to <see cref="ServiceLifetime.Transient"/>.</param>
         /// <returns>A reference to this instance after the operation has completed.</returns>
-        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Type initializerType)
+        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Type initializerType, ServiceLifetime lifetime = ServiceLifetime.Transient)
         {
             if (initializerType == null)
                 throw new ArgumentNullException(nameof(initializerType));
 
             return services
                 .AddAsyncInitialization()
-                .AddTransient(typeof(IAsyncInitializer), initializerType);
+                .AddServiceDescriptor(ServiceDescriptor.Describe(typeof(IAsyncInitializer), initializerType, lifetime));
         }
 
         /// <summary>
@@ -137,6 +140,13 @@ namespace Microsoft.Extensions.DependencyInjection
             return services
                 .AddAsyncInitialization()
                 .AddSingleton<IAsyncInitializer>(new DelegateAsyncTeardown(initializer, teardown));
+        }
+
+        // Helper to be able to use Add(ServiceDescriptor) fluently (since the return type of Add(ServiceDescriptor) is void).
+        private static IServiceCollection AddServiceDescriptor(this IServiceCollection services, ServiceDescriptor serviceDescriptor)
+        {
+            services.Add(serviceDescriptor);
+            return services;
         }
 
         private class DelegateAsyncInitializer : IAsyncInitializer
