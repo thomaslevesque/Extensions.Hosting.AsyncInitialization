@@ -5,20 +5,12 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.Abstractions;
 using static Extensions.Hosting.AsyncInitialization.Tests.CommonTestTypes;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
     public class AsyncTeardownTests
     {
-        public AsyncTeardownTests(ITestOutputHelper testOutput)
-        {
-            OutputHelper = testOutput;
-        }
-        private ITestOutputHelper OutputHelper { get; }
-
-
         [Fact]
         public async Task Single_teardown_is_called()
         {
@@ -115,14 +107,13 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         }
 
         [Fact]
-        public async Task teardown_with_scoped_dependency_is_resolved()
+        public async Task Teardown_with_scoped_dependency_is_resolved()
         {
             var host = CreateHost(
                 services =>
                 {
                     services.AddScoped(sp => A.Fake<IDependency>());
                     services.AddAsyncInitializer<InitializerWithTearDown>();
-                    services.AddTransient<ITestOutputHelper>(factory => OutputHelper);
                 },
                 true);
 

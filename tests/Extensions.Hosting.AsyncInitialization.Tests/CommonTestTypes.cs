@@ -3,24 +3,20 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
 
 namespace Extensions.Hosting.AsyncInitialization.Tests
 {
     public class CommonTestTypes
     {
+        public interface IDependency {}
 
-        public interface IDependency
+        public class Dependency : IDependency { }
+
+        public interface IDisposableDependency : IDependency, IDisposable {}
+
+        public class DisposableDependency : IDisposableDependency
         {
-
-        }
-
-        public class Dependency : IDependency
-        { }
-
-        public interface IDisposableDependency : IDependency, IDisposable
-        {
-            IServiceScope SomeMethod();
+            public void Dispose() {}
         }
 
 
@@ -41,74 +37,57 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         {
             // ReSharper disable once NotAccessedField.Local
             private readonly IDependency _dependency;
-            private readonly ITestOutputHelper _output;
 
-            public InitializerWithTearDown(IDependency dependency, ITestOutputHelper output)
+            public InitializerWithTearDown(IDependency dependency)
             {
                 _dependency = dependency;
-                _output = output;
             }
 
-            public Task InitializeAsync(CancellationToken cancellationToken)
+            public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task TeardownAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        public class EndlessTeardownInitializer : IAsyncTeardown
+        {
+            private bool _supportsCancellation;
+            public EndlessTeardownInitializer(bool supportsCancellation = true)
             {
-                if (_dependency is IDisposableDependency dep)
-                {
-                    _= dep.SomeMethod();
-                    _output.WriteLine("InitializeAsync Call to DisposableDependency");
-                }
-                return Task.CompletedTask;
+                _supportsCancellation = supportsCancellation;
             }
+            public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
             public Task TeardownAsync(CancellationToken cancellationToken)
             {
-                if (_dependency is IDisposableDependency dep)
-                {
-                    _= dep.SomeMethod();
-                    _output.WriteLine("TeardownAsync Call to DisposableDependency");
-                }
-                return Task.CompletedTask;
-            }
-        }
-
-
-        public class DisposableDependency : IDisposableDependency
-        {
-            private readonly ITestOutputHelper _output;
-
-            public DisposableDependency(IServiceProvider serviceProvider, ITestOutputHelper output)
-            {
-                ServiceProvider = serviceProvider;
-                _output = output;
-            }
-
-            public IServiceProvider ServiceProvider { get; private set; }
-
-            public IServiceScope SomeMethod()
-            {
-                return ServiceProvider.CreateScope();
-            }
-
-            public void Dispose()
-            {
-                _output.WriteLine("Disposing DisposableDependency");
+                return _supportsCancellation ? Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken) : Task.Delay(Timeout.InfiniteTimeSpan);
             }
         }
 
         public class TestService : BackgroundService
         {
+            protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
+        }
+
+        public class FaultingService : BackgroundService
+        {
+            protected override Task ExecuteAsync(CancellationToken stoppingToken) => throw new ApplicationException(nameof(FaultingService));
+        }
+
+        public class StoppingService : BackgroundService
+        {
             private readonly IHostApplicationLifetime _lifetime;
-            public TestService(IHostApplicationLifetime lifetime)
-            {
+            public StoppingService(IHostApplicationLifetime lifetime) 
+            { 
                 _lifetime = lifetime;
             }
-
             protected override Task ExecuteAsync(CancellationToken stoppingToken)
             {
-                stoppingToken.ThrowIfCancellationRequested();
                 _lifetime.StopApplication();
                 return Task.CompletedTask;
             }
         }
+
+
 
         public class SyncDisposableHostWrapper : IHost, IDisposable
         {
