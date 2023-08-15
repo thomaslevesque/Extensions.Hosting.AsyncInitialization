@@ -128,7 +128,7 @@ namespace Microsoft.Extensions.Hosting
                     var timeoutException = new TimeoutException("Teardown cancelled due to timeout.");
                     if (innerException != null)
                     {
-                        throw new AggregateException(timeoutException, innerException);
+                        throw new AggregateException(innerException, timeoutException);
                     }
                     throw timeoutException;
                 }

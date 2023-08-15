@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -162,7 +161,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
                 services.AddHostedService<StoppingService>();
-                //services.AddLogging(builder => builder.AddXUnit(OutputHelper).SetMinimumLevel(LogLevel.Debug));
             }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
@@ -183,7 +181,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
                 services.AddHostedService<StoppingService>();
-                //services.AddLogging(builder => builder.AddXUnit(OutputHelper).SetMinimumLevel(LogLevel.Debug));
             });
 
             await Assert.ThrowsAsync<TimeoutException>(() => host.InitAndRunAsync(timeout));
@@ -200,15 +197,14 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
                 services.AddHostedService<FaultingService>();
-                //services.AddLogging(builder => builder.AddXUnit(OutputHelper).SetMinimumLevel(LogLevel.Debug));
             });
 
             var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync(timeout));
             Assert.IsType<AggregateException>(exception);
             var innerExceptions = ((AggregateException)exception).InnerExceptions;
             Assert.Collection(innerExceptions, 
-                item => Assert.IsType<TimeoutException>(item),
-                item => Assert.IsType<ApplicationException>(item));
+                item => Assert.IsType<ApplicationException>(item),
+                item => Assert.IsType<TimeoutException>(item));
         }
 
         [Theory]
@@ -223,7 +219,6 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             {
                 services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
                 services.AddHostedService<StoppingService>();
-                //services.AddLogging(builder => builder.AddXUnit(OutputHelper).SetMinimumLevel(LogLevel.Debug));
             }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
