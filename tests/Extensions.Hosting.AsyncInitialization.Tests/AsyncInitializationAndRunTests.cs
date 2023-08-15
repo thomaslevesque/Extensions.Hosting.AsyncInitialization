@@ -361,53 +361,5 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             await host.InitAndRunAsync();
         }
-
-        [Obsolete("DI Test. Not relevant in the context of Extensions.Hosting.AsyncInitialization")]
-        private async Task Scoped_disposable_dependency_is_disposed_twice_before_service()
-        {
-            var dependency = A.Fake<IDisposableDependency>();
-            var service = A.Fake<TestService>();
-
-            var host = CreateHost(
-                services =>
-                {
-                    services.AddScoped<IDependency>(sp => dependency);
-                    services.AddAsyncInitializer<InitializerWithTearDown>();
-                    services.AddHostedService(sp => service);
-                },
-                true);
-
-            var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
-            using var ctr = lifetime.ApplicationStarted.Register(lifetime.StopApplication);
-
-            await host.InitAndRunAsync();
-
-            A.CallTo(() => dependency.Dispose()).MustHaveHappenedTwiceExactly()
-               .Then(A.CallTo(() => service.Dispose()).MustHaveHappenedOnceExactly());
-        }
-
-        [Obsolete("DI Test. Not relevant in the context of Extensions.Hosting.AsyncInitialization")]
-        private async Task Singleton_disposable_dependency_is_disposed_once_after_service()
-        {
-            var dependency = A.Fake<IDisposableDependency>();
-            var service = A.Fake<TestService>();
-
-            var host = CreateHost(
-                services =>
-                {
-                    services.AddSingleton<IDependency>(sp => dependency);
-                    services.AddAsyncInitializer<InitializerWithTearDown>();
-                    services.AddHostedService(sp => service);
-                },
-                true);
-
-            var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
-            using var ctr = lifetime.ApplicationStarted.Register(lifetime.StopApplication);
-
-            await host.InitAndRunAsync();
-            A.CallTo(() => service.Dispose()).MustHaveHappenedOnceExactly()
-                .Then(A.CallTo(() => dependency.Dispose()).MustHaveHappenedOnceExactly());
-        }
-
     }
 }
