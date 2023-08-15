@@ -80,6 +80,7 @@ namespace Microsoft.Extensions.Hosting
         /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
         /// <exception cref="TimeoutException">Thrown when teardown times out.</exception>
+        /// <exception cref="AggregateException">Thrown when multiple exceptions occur.</exception>
         public static async Task InitAndRunAsync(this IHost host, CancellationToken cancellationToken = default) 
             => await host.InitAndRunAsync(DefaultTeardownTimeout, cancellationToken).ConfigureAwait(false);
 
@@ -100,23 +101,36 @@ namespace Microsoft.Extensions.Hosting
             await using (host.AsAsyncDisposable().ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                
+                using var cts = new CancellationTokenSource();
+                Exception? innerException = null;
                 try
                 {
-                    await host.InitAsync(cancellationToken).ConfigureAwait(false);
-                    await host.StartAsync(cancellationToken).ConfigureAwait(false);
-                    await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
-                }
-                finally
-                {
-                    using var cts = new CancellationTokenSource(teardownTimeout);
                     try
                     {
+                        await host.InitAsync(cancellationToken).ConfigureAwait(false);
+                        await host.StartAsync(cancellationToken).ConfigureAwait(false);
+                        await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        innerException = ex;
+                        throw;
+                    }
+                    finally
+                    {
+                        cts.CancelAfter(teardownTimeout);
                         await host.TeardownAsync(cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (cts.IsCancellationRequested)
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
+                {
+                    var timeoutException = new TimeoutException("Teardown cancelled due to timeout.");
+                    if (innerException != null)
                     {
-                        throw new TimeoutException("Teardown cancelled due to timeout.");
+                        throw new AggregateException(timeoutException, innerException);
                     }
+                    throw timeoutException;
                 }
             }
         }

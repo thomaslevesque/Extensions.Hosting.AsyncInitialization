@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -186,6 +187,28 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             });
 
             await Assert.ThrowsAsync<TimeoutException>(() => host.InitAndRunAsync(timeout));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task InitAndRunAsync_throws_AggregateException_when_host_fails_and_teardown_exceeds_timeout(bool supportsCancellation)
+        {
+            var timeout = TimeSpan.FromMilliseconds(100);
+
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
+                services.AddHostedService<FaultingService>();
+                //services.AddLogging(builder => builder.AddXUnit(OutputHelper).SetMinimumLevel(LogLevel.Debug));
+            });
+
+            var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync(timeout));
+            Assert.IsType<AggregateException>(exception);
+            var innerExceptions = ((AggregateException)exception).InnerExceptions;
+            Assert.Collection(innerExceptions, 
+                item => Assert.IsType<TimeoutException>(item),
+                item => Assert.IsType<ApplicationException>(item));
         }
 
         [Theory]
