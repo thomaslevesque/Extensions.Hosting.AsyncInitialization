@@ -84,15 +84,14 @@ namespace Microsoft.Extensions.Hosting
             => await host.InitAndRunAsync(DefaultTeardownTimeout, cancellationToken).ConfigureAwait(false);
 
 
-        /// <param name="host">The <see cref="IHost"/> to initialize and run.</param>
+#pragma warning disable 1573
+        /// <inheritdoc  cref="InitAndRunAsync(IHost, CancellationToken)" path="/*[not(self::remarks)]"/>
         /// <param name="teardownTimeout">The <see cref="TimeSpan"/> timeout value to use for teardown. Setting this value to <see cref="Timeout.InfiniteTimeSpan"/> will disable timeout handling.</param>
-        /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
         /// <remarks>
         /// Cancelling the <paramref name="cancellationToken"/> will not affect the teardown process. 
         /// Teardown, when configured, is always performed, regardless if the process is cancelled or if an exception is thrown, using a timeout as specified by the <paramref name="teardownTimeout"/> parameter.
         /// The entire teardown process will be cancelled if the timeout expires before all initializers have completed teardown.
         /// </remarks>
-        /// <inheritdoc  cref="InitAndRunAsync(IHost, CancellationToken)"/>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when an invalid <paramref name="teardownTimeout"/> value is passed.</exception>
         public static async Task InitAndRunAsync(this IHost host, TimeSpan teardownTimeout, CancellationToken cancellationToken = default)
         {
@@ -121,6 +120,7 @@ namespace Microsoft.Extensions.Hosting
                 }
             }
         }
+#pragma warning restore 1573
 
         // wraps an IHost instance in an IAsyncDisposable 
         private static IAsyncDisposable AsAsyncDisposable(this IHost host)
