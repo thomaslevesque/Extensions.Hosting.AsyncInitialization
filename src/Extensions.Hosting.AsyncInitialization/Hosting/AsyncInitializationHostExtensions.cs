@@ -71,7 +71,7 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
         /// <remarks>
         /// Cancelling the <paramref name="cancellationToken"/> will not affect the teardown process. 
-        /// Teardown, when configured, is always performed, regardless if the process is cancelled or if an exception is thrown.
+        /// Teardown, when configured, is always performed, even if the process is cancelled or an exception is thrown.
         /// To prevent teardown from blocking forever, a <see cref="CancellationToken"/> with a <see cref="DefaultTeardownTimeout"/> value is passed to any registered initializers that implement <see cref="IAsyncTeardown"/>. 
         /// The entire teardown process will be cancelled if the timeout expires before all initializers have completed teardown.
         /// </remarks>
