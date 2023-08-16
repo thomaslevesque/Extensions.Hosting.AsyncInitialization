@@ -90,7 +90,7 @@ namespace Microsoft.Extensions.Hosting
         /// <param name="teardownTimeout">The <see cref="TimeSpan"/> timeout value to use for teardown. Setting this value to <see cref="Timeout.InfiniteTimeSpan"/> will disable timeout handling.</param>
         /// <remarks>
         /// Cancelling the <paramref name="cancellationToken"/> will not affect the teardown process. 
-        /// Teardown, when configured, is always performed, regardless if the process is cancelled or if an exception is thrown, using a timeout as specified by the <paramref name="teardownTimeout"/> parameter.
+        /// Teardown, when configured, is always performed, even if the process is cancelled or an exception is thrown, using a timeout as specified by the <paramref name="teardownTimeout"/> parameter.
         /// The entire teardown process will be cancelled if the timeout expires before all initializers have completed teardown.
         /// </remarks>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when an invalid <paramref name="teardownTimeout"/> value is passed.</exception>
