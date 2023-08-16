@@ -42,17 +42,17 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddAsyncInitializer(initializer1);
                 services.AddAsyncInitializer(initializer2);
                 services.AddAsyncInitializer(initializer3);
-                services.AddHostedService<TestService>();
+                services.AddHostedService<StoppingService>();
             });
 
             await host.InitAndRunAsync();
             
-            A.CallTo(() => initializer1.InitializeAsync(default)).MustHaveHappenedOnceExactly()
-                .Then(A.CallTo(() => initializer2.InitializeAsync(default)).MustHaveHappenedOnceExactly())
-                .Then(A.CallTo(() => initializer3.InitializeAsync(default)).MustHaveHappenedOnceExactly())
-                .Then(A.CallTo(() => initializer3.TeardownAsync(default)).MustHaveHappenedOnceExactly())
-                .Then(A.CallTo(() => initializer2.TeardownAsync(default)).MustHaveHappenedOnceExactly())
-                .Then(A.CallTo(() => initializer1.TeardownAsync(default)).MustHaveHappenedOnceExactly());
+            A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly()
+                .Then(A.CallTo(() => initializer2.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly())
+                .Then(A.CallTo(() => initializer3.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly())
+                .Then(A.CallTo(() => initializer3.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly())
+                .Then(A.CallTo(() => initializer2.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly())
+                .Then(A.CallTo(() => initializer1.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly());
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var initializer1 = A.Fake<IAsyncTeardown>();
             var initializer2 = A.Fake<IAsyncTeardown>();
             var initializer3 = A.Fake<IAsyncTeardown>();
-            var service = A.Fake<BackgroundService>();
+            var service = A.Fake<TestService>();
 
             A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).Invokes(_ => cancellationTokenSource.Cancel());
 
@@ -74,24 +74,23 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
                 services.AddHostedService(factory => service);
             });
 
-            var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync(cancellationTokenSource.Token));
-            Assert.IsType<OperationCanceledException>(exception);
+            await Assert.ThrowsAsync<OperationCanceledException>(() => host.InitAndRunAsync(cancellationTokenSource.Token));
 
             A.CallTo(() => initializer1.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
             A.CallTo(() => initializer2.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
             A.CallTo(() => initializer3.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
-            A.CallTo(() => initializer1.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => initializer2.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => initializer3.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => service.StartAsync(CancellationToken.None)).MustNotHaveHappened();
+            A.CallTo(() => initializer1.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer2.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer3.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => service.StartAsync(A<CancellationToken>._)).MustNotHaveHappened();
         }
 
         [Fact]
         public async Task Failing_initializer_skips_host_run_and_calls_teardown()
         {
-            var service = A.Fake<BackgroundService>();
+            var service = A.Fake<TestService>();
             var initializer = A.Fake<IAsyncTeardown>();
-            A.CallTo(() => initializer.InitializeAsync(default)).ThrowsAsync(() => new Exception("oops"));
+            A.CallTo(() => initializer.InitializeAsync(A<CancellationToken>._)).ThrowsAsync(() => new Exception("oops"));
 
             var host = CreateHost(services =>
             {
@@ -103,9 +102,9 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<Exception>(exception);
             Assert.Equal("oops", exception.Message);
 
-            A.CallTo(() => initializer.InitializeAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => service.StartAsync(CancellationToken.None)).MustNotHaveHappened();
-            A.CallTo(() => initializer.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => service.StartAsync(A<CancellationToken>._)).MustNotHaveHappened();
+            A.CallTo(() => initializer.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         }
 
         [Theory]
@@ -115,21 +114,15 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         {
             var host = CreateHost(services =>
             {
-                services.AddScoped<IDependency, DisposableDependency>();
-                services.AddTransient(factory => OutputHelper);
-                services.AddAsyncInitializer<InitializerWithTearDown>();
-                services.AddHostedService<TestService>();
-            }, true);
-
-            if (forceIDisposableHost) 
-                host = new SyncDisposableHostWrapper(host);
+                services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
+                services.AddHostedService<StoppingService>();
+            }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
             await host.InitAndRunAsync();
-            
-            var exception = Record.Exception(() => host.Services.CreateScope());
-            Assert.IsType<ObjectDisposedException>(exception);
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);
+
         }
 
         [Theory]
@@ -138,12 +131,12 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         public async Task Host_is_disposed_after_failing_teardown(bool forceIDisposableHost)
         {
             var initializer = A.Fake<IAsyncTeardown>();
-            A.CallTo(() => initializer.TeardownAsync(default)).ThrowsAsync(() => new Exception("oops"));
+            A.CallTo(() => initializer.TeardownAsync(A<CancellationToken>._)).ThrowsAsync(() => new Exception("oops"));
 
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer);
-                services.AddHostedService<TestService>();
+                services.AddHostedService<StoppingService>();
             }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
@@ -152,9 +145,89 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<Exception>(exception);
             Assert.Equal("oops", exception.Message);
 
-            exception = Record.Exception(() => host.Services.CreateScope());
-            Assert.IsType<ObjectDisposedException>(exception);
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);
         }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public async Task Host_is_disposed_after_teardown_timeout(bool forceIDisposableHost, bool supportsCancellation)
+        {
+            var timeout = TimeSpan.FromMilliseconds(100);  
+
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
+                services.AddHostedService<StoppingService>();
+            }, forceIDisposableHost: forceIDisposableHost);
+
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
+
+            await Assert.ThrowsAnyAsync<TimeoutException>(() => host.InitAndRunAsync(timeout));
+
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task InitAndRunAsync_throws_TimeoutException_when_teardown_exceeds_timeout(bool supportsCancellation)
+        {
+            var timeout = TimeSpan.FromMilliseconds(100);
+
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
+                services.AddHostedService<StoppingService>();
+            });
+
+            await Assert.ThrowsAsync<TimeoutException>(() => host.InitAndRunAsync(timeout));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task InitAndRunAsync_throws_AggregateException_when_host_fails_and_teardown_exceeds_timeout(bool supportsCancellation)
+        {
+            var timeout = TimeSpan.FromMilliseconds(100);
+
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(sp => new EndlessTeardownInitializer(supportsCancellation));
+                services.AddHostedService<FaultingService>();
+            });
+
+            var exception = await Record.ExceptionAsync(() => host.InitAndRunAsync(timeout));
+            Assert.IsType<AggregateException>(exception);
+            var innerExceptions = ((AggregateException)exception).InnerExceptions;
+            Assert.Collection(innerExceptions, 
+                item => Assert.IsType<ApplicationException>(item),
+                item => Assert.IsType<TimeoutException>(item));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        
+        public async Task Host_is_disposed_with_infinite_teardown_timeout(bool forceIDisposableHost)
+        {
+            var timeout = Timeout.InfiniteTimeSpan;
+
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
+                services.AddHostedService<StoppingService>();
+            }, forceIDisposableHost: forceIDisposableHost);
+
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
+
+            await host.InitAndRunAsync(timeout);
+
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);
+        }
+
 
         [Theory]
         [InlineData(false)]
@@ -176,8 +249,7 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             Assert.IsType<Exception>(exception);
             Assert.Equal("oops", exception.Message);
 
-            exception = Record.Exception(() => host.Services.CreateScope());
-            Assert.IsType<ObjectDisposedException>(exception);
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);
         }
 
         [Theory]
@@ -185,41 +257,58 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
         [InlineData(true)]
         public async Task Host_is_disposed_after_cancellation(bool forceIDisposableHost)
         {
-
-            using var cancellationTokenSource = new CancellationTokenSource();
-            var service = A.Fake<TestService>();
-            A.CallTo(() => service.StartAsync(A<CancellationToken>._)).Invokes(_ => cancellationTokenSource.Cancel()).CallsBaseMethod();
-
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
-                services.AddHostedService(factory => service);
+                services.AddHostedService<TestService>();
             }, forceIDisposableHost: forceIDisposableHost);
 
             OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
 
-            await Assert.ThrowsAsync<TaskCanceledException>(() => host.InitAndRunAsync(cancellationTokenSource.Token));
+            var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+            using var cancellationTokenSource = new CancellationTokenSource();
+            using var ctr = lifetime.ApplicationStarted.Register(cancellationTokenSource.Cancel);
 
-            var exception = Record.Exception(() => host.Services.CreateScope());
-            Assert.IsType<ObjectDisposedException>(exception);
+            await host.InitAndRunAsync(cancellationTokenSource.Token);
+
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);
         }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Host_is_disposed_after_service_fails(bool forceIDisposableHost)
+        {
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitializer(sp => A.Fake<IAsyncTeardown>());
+                services.AddHostedService<FaultingService>();   
+            }, forceIDisposableHost: forceIDisposableHost);
+
+            OutputHelper.WriteLine(host is IAsyncDisposable ? "Using IAsyncDisposable Host" : "Using IDisposable Host");
+
+            await Assert.ThrowsAsync<ApplicationException>(() => host.InitAndRunAsync()); 
+            Assert.Throws<ObjectDisposedException>(host.Services.CreateScope);  
+        }
+
 
         [Fact]
         public async Task Initializer_with_teardown_and_scoped_dependency_is_resolved()
         {
+
             var host = CreateHost(
                 services =>
                 {
-                    services.AddScoped<IDependency, DisposableDependency>();
+                    services.AddScoped(sp => A.Fake<IDependency>());
                     services.AddAsyncInitializer<InitializerWithTearDown>();
-                    services.AddTransient(factory => OutputHelper);
-                    services.AddHostedService<TestService>();
+                    services.AddHostedService<StoppingService>();
                 },
                 true);
 
             await host.InitAndRunAsync();    
         }
 
+        
         [Fact]
         public async Task Single_initializer_with_teardown_is_called()
         {
@@ -228,20 +317,20 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
             var host = CreateHost(services =>
             {
                 services.AddAsyncInitializer(initializer);
-                services.AddHostedService<TestService>();
+                services.AddHostedService<StoppingService>();
             });
 
             await host.InitAndRunAsync();
             
-            A.CallTo(() => initializer.InitializeAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
-            A.CallTo(() => initializer.TeardownAsync(CancellationToken.None)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer.InitializeAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
+            A.CallTo(() => initializer.TeardownAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         }
 
         [Fact]
-        public async Task Cancelled_call_does_nothing()
+        public async Task InitAndRunAsync_throws_OperationCancelledException_when_called_with_cancelled_token()
         {
             var initializer = A.Fake<IAsyncTeardown>();
-            var service = A.Fake<BackgroundService>();
+            var service = A.Fake<TestService>();
 
             var host = CreateHost(services =>
             {
@@ -251,12 +340,21 @@ namespace Extensions.Hosting.AsyncInitialization.Tests
 
             await Assert.ThrowsAsync<OperationCanceledException>(() => host.InitAndRunAsync(new CancellationToken(true)));
             
-            A.CallTo(() => initializer.InitializeAsync(CancellationToken.None)).MustNotHaveHappened();
-            A.CallTo(() => initializer.TeardownAsync(CancellationToken.None)).MustNotHaveHappened();
-            A.CallTo(() => service.StartAsync(default)).MustNotHaveHappened();
+            A.CallTo(() => initializer.InitializeAsync(A<CancellationToken>._)).MustNotHaveHappened();
+            A.CallTo(() => initializer.TeardownAsync(A<CancellationToken>._)).MustNotHaveHappened();
+            A.CallTo(() => service.StartAsync(A<CancellationToken>._)).MustNotHaveHappened();
         }
 
+        [Fact]
+        public async Task InitAndRunAsync_without_initializer_does_not_fail()
+        {
+            var host = CreateHost(services =>
+            {
+                services.AddAsyncInitialization();
+                services.AddHostedService<StoppingService>();
+            });
 
-        
+            await host.InitAndRunAsync();
+        }
     }
 }

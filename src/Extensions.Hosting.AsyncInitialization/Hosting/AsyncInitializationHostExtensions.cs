@@ -1,8 +1,8 @@
+using Extensions.Hosting.AsyncInitialization;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Extensions.Hosting.AsyncInitialization;
-using Microsoft.Extensions.DependencyInjection;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.Hosting
@@ -12,6 +12,11 @@ namespace Microsoft.Extensions.Hosting
     /// </summary>
     public static class AsyncInitializationHostExtensions
     {
+        /// <summary>
+        /// The default timeout value applied when performing teardown.
+        /// </summary>
+        public static readonly TimeSpan DefaultTeardownTimeout = TimeSpan.FromSeconds(10);
+
         /// <summary>
         /// Initializes the application, by calling all registered async initializers.
         /// </summary>
@@ -64,29 +69,72 @@ namespace Microsoft.Extensions.Hosting
         /// </summary>
         /// <param name="host">The <see cref="IHost"/> to initialize and run.</param>
         /// <param name="cancellationToken">Optionally propagates notifications that the operation should be cancelled</param>
+        /// <remarks>
+        /// Cancelling the <paramref name="cancellationToken"/> will not affect the teardown process. 
+        /// Teardown, when configured, is always performed, even if the process is cancelled or an exception is thrown.
+        /// To prevent teardown from blocking forever, a <see cref="CancellationToken"/> with a <see cref="DefaultTeardownTimeout"/> value is passed to any registered initializers that implement <see cref="IAsyncTeardown"/>. 
+        /// The entire teardown process will be cancelled if the timeout expires before all initializers have completed teardown.
+        /// </remarks>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the host is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the initialization service has not been registered.</exception>
         /// <exception cref="OperationCanceledException">Thrown when the cancellationToken is cancelled.</exception>
-        public static async Task InitAndRunAsync(this IHost host, CancellationToken cancellationToken = default)
+        /// <exception cref="TimeoutException">Thrown when teardown times out.</exception>
+        /// <exception cref="AggregateException">Thrown when multiple exceptions occur.</exception>
+        public static async Task InitAndRunAsync(this IHost host, CancellationToken cancellationToken = default) 
+            => await host.InitAndRunAsync(DefaultTeardownTimeout, cancellationToken).ConfigureAwait(false);
+
+
+#pragma warning disable 1573
+        /// <inheritdoc  cref="InitAndRunAsync(IHost, CancellationToken)" path="/*[not(self::remarks)]"/>
+        /// <param name="teardownTimeout">The <see cref="TimeSpan"/> timeout value to use for teardown. Setting this value to <see cref="Timeout.InfiniteTimeSpan"/> will disable timeout handling.</param>
+        /// <remarks>
+        /// Cancelling the <paramref name="cancellationToken"/> will not affect the teardown process. 
+        /// Teardown, when configured, is always performed, even if the process is cancelled or an exception is thrown, using a timeout as specified by the <paramref name="teardownTimeout"/> parameter.
+        /// The entire teardown process will be cancelled if the timeout expires before all initializers have completed teardown.
+        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when an invalid <paramref name="teardownTimeout"/> value is passed.</exception>
+        public static async Task InitAndRunAsync(this IHost host, TimeSpan teardownTimeout, CancellationToken cancellationToken = default)
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
 
             await using (host.AsAsyncDisposable().ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                
+                using var cts = new CancellationTokenSource();
+                Exception? innerException = null;
                 try
                 {
-                    await host.InitAsync(cancellationToken).ConfigureAwait(false);
-                    await host.StartAsync(cancellationToken).ConfigureAwait(false);
-                    await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await host.InitAsync(cancellationToken).ConfigureAwait(false);
+                        await host.StartAsync(cancellationToken).ConfigureAwait(false);
+                        await host.WaitForShutdownAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        innerException = ex;
+                        throw;
+                    }
+                    finally
+                    {
+                        cts.CancelAfter(teardownTimeout);
+                        await host.TeardownAsync(cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
+                    }
                 }
-                finally
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
                 {
-                    await host.TeardownAsync(CancellationToken.None).ConfigureAwait(false);
+                    var timeoutException = new TimeoutException("Teardown cancelled due to timeout.");
+                    if (innerException != null)
+                    {
+                        throw new AggregateException(innerException, timeoutException);
+                    }
+                    throw timeoutException;
                 }
             }
         }
+#pragma warning restore 1573
 
         // wraps an IHost instance in an IAsyncDisposable 
         private static IAsyncDisposable AsAsyncDisposable(this IHost host)
