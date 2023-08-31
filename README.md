@@ -127,7 +127,7 @@ await using (var host = CreateHostBuilder(args).Build())
 
 The `InitAndRunAsync`, `InitAsync` and `TeardownAsync` all support passing a cancellation token to abort execution if needed. Cancellation will be propagated to the initializers.
 
-In the following example, execution (including initialization and teardown) will be aborted when `Ctrl + C` keys are pressed :
+In the following example, execution (including initialization, but not teardown) will be aborted when `Ctrl + C` keys are pressed :
 ```csharp
 public static async Task Main(string[] args)
 {
@@ -141,6 +141,10 @@ public static async Task Main(string[] args)
 }
 ```
 
+As mentioned above, when using `InitAndRunAsync`, the cancellation token will *not* be passed to the teardown. This is because when your application is stopped, you typically still want the teardown to occur. Instead, teardown will run with a default timeout of 10 seconds (you can also specify a timeout explicitly).
+
+If you don't want this behavior, you can manually call `InitAsync` and `TeardownAsync` as explained in the previous section.
+
 ### Migration from 2.x or earlier
 
 If you were already using this library prior to version 3.x, your code would typically look like this:
@@ -150,4 +154,4 @@ await host.InitAsync();
 await host.RunAsync();
 ```
 
-This will still work without changes. Just keep in mind that, as explained in the previous section, adding a call to `host.TeardownAsync()` after `host.RunAsync()` will not work. If you need teardown, the simplest way is to remove the explicit call to `InitAsync`, and call `InitAndRunAsync` instead of `RunAsync`.
+This will still work without changes. Just keep in mind that, as explained in the previous section, adding a call to `host.TeardownAsync()` after `host.RunAsync()` *will not work*. If you need teardown, the simplest way is to remove the explicit call to `InitAsync`, and call `InitAndRunAsync` instead of `RunAsync`.
