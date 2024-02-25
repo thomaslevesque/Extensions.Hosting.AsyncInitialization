@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions.Hosting.AsyncInitialization;
@@ -33,7 +34,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="services">The <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> to add the service to.</param>
         /// <param name="lifetime">The initializer's lifetime. Defaults to <see cref="ServiceLifetime.Transient"/>.</param>
         /// <returns>A reference to this instance after the operation has completed.</returns>
-        public static IServiceCollection AddAsyncInitializer<TInitializer>(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Transient)
+        public static IServiceCollection AddAsyncInitializer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]TInitializer>(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Transient)
             where TInitializer : class, IAsyncInitializer
         {
             return services
@@ -83,7 +84,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="initializerType">The type of the async initializer to add.</param>
         /// <param name="lifetime">The initializer's lifetime. Defaults to <see cref="ServiceLifetime.Transient"/>.</param>
         /// <returns>A reference to this instance after the operation has completed.</returns>
-        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, Type initializerType, ServiceLifetime lifetime = ServiceLifetime.Transient)
+        public static IServiceCollection AddAsyncInitializer(this IServiceCollection services, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]Type initializerType, ServiceLifetime lifetime = ServiceLifetime.Transient)
         {
             if (initializerType == null)
                 throw new ArgumentNullException(nameof(initializerType));

@@ -11,6 +11,7 @@
         <PackageTags>.net core;hosting;async;initialization</PackageTags>
         <RepositoryUrl>https://github.com/thomaslevesque/Extensions.Hosting.AsyncInitialization</RepositoryUrl>
         <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+        <IsTrimmable>true</IsTrimmable>
     </PropertyGroup>
     
     <PropertyGroup>
