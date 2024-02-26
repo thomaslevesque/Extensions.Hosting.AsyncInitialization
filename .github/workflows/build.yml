@@ -1,0 +1,26 @@
+name: Build
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run build script
+        shell: pwsh
+        run: ./build.ps1
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/packages/*.nupkg
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: artifacts/logs/*.binlog

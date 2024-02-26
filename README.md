@@ -1,8 +1,7 @@
 # Extensions.Hosting.AsyncInitialization
 
 [![NuGet version](https://img.shields.io/nuget/v/Extensions.Hosting.AsyncInitialization.svg?logo=nuget)](https://www.nuget.org/packages/Extensions.Hosting.AsyncInitialization)
-[![AppVeyor build](https://img.shields.io/appveyor/ci/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization)
-[![AppVeyor tests](https://img.shields.io/appveyor/tests/thomaslevesque/extensions-hosting-asyncinitialization.svg?logo=appveyor)](https://ci.appveyor.com/project/thomaslevesque/extensions-hosting-asyncinitialization/build/tests)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/thomaslevesque/dotnet-project-templates/build.yml?branch=master&logo=github)
 
 A simple helper to perform async application initialization and teardown for the generic host in .NET 6.0 or higher (e.g. in ASP.NET Core apps).
 
@@ -11,7 +10,7 @@ A simple helper to perform async application initialization and teardown for the
 1. Install the [Extensions.Hosting.AsyncInitialization](https://www.nuget.org/packages/Extensions.Hosting.AsyncInitialization/) NuGet package:
 
     Command line:
-
+   
     ```PowerShell
     dotnet add package Extensions.Hosting.AsyncInitialization
     ```
