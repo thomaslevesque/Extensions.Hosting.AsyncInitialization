@@ -1,7 +1,7 @@
 # Extensions.Hosting.AsyncInitialization
 
 [![NuGet version](https://img.shields.io/nuget/v/Extensions.Hosting.AsyncInitialization.svg?logo=nuget)](https://www.nuget.org/packages/Extensions.Hosting.AsyncInitialization)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/thomaslevesque/dotnet-project-templates/build.yml?branch=master&logo=github)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/thomaslevesque/Extensions.Hosting.AsyncInitialization/build.yml?branch=master&logo=github)](https://github.com/thomaslevesque/Extensions.Hosting.AsyncInitialization/actions/workflows/build.yml)
 
 A simple helper to perform async application initialization and teardown for the generic host in .NET 6.0 or higher (e.g. in ASP.NET Core apps).
 
