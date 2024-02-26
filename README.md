@@ -46,15 +46,15 @@ A simple helper to perform async application initialization and teardown for the
 
 4. In the `Program` class, replace the call to `host.RunAsync()` with `host.InitAndRunAsync()`:
 
-```csharp
-public static async Task Main(string[] args)
-{
-    var host = CreateHostBuilder(args).Build();
-    await host.InitAndRunAsync();
-}
-```
-
-This will run each initializer, in the order in which they were registered.
+   ```csharp
+   public static async Task Main(string[] args)
+   {
+       var host = CreateHostBuilder(args).Build();
+       await host.InitAndRunAsync();
+   }
+   ```
+   
+   This will run each initializer, in the order in which they were registered.
 
 ## Teardown
 
@@ -153,4 +153,4 @@ await host.InitAsync();
 await host.RunAsync();
 ```
 
-This will still work without changes. Just keep in mind that, as explained in the previous section, adding a call to `host.TeardownAsync()` after `host.RunAsync()` *will not work*. If you need teardown, the simplest way is to remove the explicit call to `InitAsync`, and call `InitAndRunAsync` instead of `RunAsync`.
+This will still work without changes. Just keep in mind that, as explained in the Advanced Usage section, adding a call to `host.TeardownAsync()` after `host.RunAsync()` *will not work*. If you need teardown, the simplest way is to remove the explicit call to `InitAsync`, and call `InitAndRunAsync` instead of `RunAsync`.
